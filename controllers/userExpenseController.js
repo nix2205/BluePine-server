@@ -442,6 +442,8 @@ const getCurrentMonth = () => {
 };
 
 
+
+
 // Helpers
 const formatDate = () => {
   const now = new Date();
@@ -450,6 +452,29 @@ const formatDate = () => {
   const year = String(now.getFullYear()).slice(-2);
   return `${day}/${month}/${year}`;
 };
+
+const recalculateNWDays = async (userId, monthString) => {
+  const monthIndex = MONTHS.indexOf(monthString);
+
+  const now = new Date();
+  const year = now.getFullYear(); // assuming same year system
+
+  const startOfMonth = new Date(year, monthIndex, 1);
+  const endOfMonth = new Date(year, monthIndex + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+
+  const count = await NormalExpense.countDocuments({
+    user: userId,
+    workType: "NW",
+    date: { $gte: startOfMonth, $lte: endOfMonth }
+  });
+
+  await Approval.updateOne(
+    { user: userId, month: monthString },
+    { $set: { NWdays: count } }
+  );
+};
+
 
 const formatTime = () => {
   const now = new Date();
@@ -760,13 +785,14 @@ exports.createNWExpense = async (req, res) => {
     });
 
     // ✅ Increment NWdays
-    await Approval.updateOne(
-      { user: userId, month: expenseMonth },
-      {
-        $inc: { NWdays: 1 },
-        $set: { lastReported: formatDate() },
-      }
-    );
+    await recalculateNWDays(userId, expenseMonth);
+
+await Approval.updateOne(
+  { user: userId, month: expenseMonth },
+  {
+    $set: { lastReported: formatDate() },
+  }
+);
 
     res.status(201).json({
       message: "NW entry created successfully",

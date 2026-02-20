@@ -1,6 +1,38 @@
 const NormalExpense = require("../models/NormalExpense");
 const OtherExpense = require("../models/OtherExpense");
 const User = require("../models/User");
+const Approval = require("../models/Approval");
+
+const MONTHS = [
+  "JAN","FEB","MAR","APR","MAY","JUN",
+  "JUL","AUG","SEP","OCT","NOV","DEC"
+];
+
+const getMonthFromDate = (dateObj) => {
+  return MONTHS[dateObj.getMonth()];
+};
+
+const recalculateNWDays = async (userId, monthString) => {
+  const monthIndex = MONTHS.indexOf(monthString);
+
+  const now = new Date();
+  const year = now.getFullYear(); // assuming same year system
+
+  const startOfMonth = new Date(year, monthIndex, 1);
+  const endOfMonth = new Date(year, monthIndex + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+
+  const count = await NormalExpense.countDocuments({
+    user: userId,
+    workType: "NW",
+    date: { $gte: startOfMonth, $lte: endOfMonth }
+  });
+
+  await Approval.updateOne(
+    { user: userId, month: monthString },
+    { $set: { NWdays: count } }
+  );
+};
 
 exports.getMyExpenses = async (req, res) => {
   try {
@@ -224,6 +256,10 @@ exports.deleteNormalExpense = async (req, res) => {
     }
 
     await expense.deleteOne();
+    if (expense.workType === "NW") {
+  const monthString = getMonthFromDate(expense.date);
+  await recalculateNWDays(expense.user, monthString);
+}
 
     res.json({ message: "Normal expense deleted successfully" });
   } catch (err) {
