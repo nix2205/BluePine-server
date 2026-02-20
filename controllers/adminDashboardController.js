@@ -340,9 +340,9 @@ exports.getAdminDashboard = async (req, res) => {
   try {
     const requester = req.user;
 
-    if (requester.role !== "admin") {
-      return res.status(403).json({ message: "Not authorized" });
-    }
+    if (!["admin", "manager"].includes(req.user.role)) {
+  return res.status(403).json({ message: "Not authorized" });
+}
 
     const now = new Date();
     const currentMonthIndex = getCurrentMonthIndex();
@@ -353,11 +353,25 @@ exports.getAdminDashboard = async (req, res) => {
     const prevMonthCode = MONTHS[prevMonthIndex];
 
     // 🔹 Fetch all active non-admin users of same company
-    const users = await User.find({
-      company: requester.company,
-      isActive: true,
-      role: { $ne: "admin" },
-    }).select("_id userId username role");
+    // const users = await User.find({
+    //   company: requester.company,
+    //   isActive: true,
+    //   role: { $ne: "admin" },
+    // }).select("_id userId username role");
+
+    let userQuery = {
+  company: requester.company,
+  isActive: true,
+  role: { $ne: "admin" },
+};
+
+// 🔹 If manager → only show their subordinates
+if (requester.role === "manager") {
+  userQuery.superior = requester._id;
+}
+
+const users = await User.find(userQuery)
+  .select("_id userId username role");
 
     // 🔹 Fetch all approvals for current + prev month in ONE query
     const approvals = await Approval.find({
