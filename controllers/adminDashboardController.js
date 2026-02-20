@@ -253,6 +253,17 @@ exports.getAdminDashboard = async (req, res) => {
         (prevNormal[0]?.total || 0) +
         (prevOther[0]?.total || 0);
 
+        // 🔥 NW DAYS CALCULATION (LIVE)
+const currentNWdays = await NormalExpense.countDocuments({
+  user: user._id,
+  date: { $gte: currentStart, $lte: currentEnd },
+});
+
+const prevNWdays = await NormalExpense.countDocuments({
+  user: user._id,
+  date: { $gte: prevStart, $lte: prevEnd },
+});
+
       dashboardData.push({
         _id: user._id,
         userId: user.userId,
@@ -261,24 +272,26 @@ exports.getAdminDashboard = async (req, res) => {
         hq: hq?.placeOfWork || "-",
 
         currentMonth: {
-          month: currentMonthCode,
-          total: currentTotal,
-          approvedByUser:
-            currentApproval?.approvedByUser || false,
-          approvedBySuperior:
-            currentApproval?.approvedBySuperior || false,
-        },
+  month: currentMonthCode,
+  total: currentTotal,
+  approvedByUser:
+    currentApproval?.approvedByUser || false,
+  approvedBySuperior:
+    currentApproval?.approvedBySuperior || false,
+  NWdays: currentNWdays,
+},
 
-        prevMonth: {
-          month: prevMonthCode,
-          total: prevTotal,
-          approvedByUser:
-            prevApproval?.approvedByUser || false,
-          approvedBySuperior:
-            prevApproval?.approvedBySuperior || false,
-        },
+prevMonth: {
+  month: prevMonthCode,
+  total: prevTotal,
+  approvedByUser:
+    prevApproval?.approvedByUser || false,
+  approvedBySuperior:
+    prevApproval?.approvedBySuperior || false,
+  NWdays: prevNWdays,
+},
 
-        NWdays: currentApproval?.NWdays || 0,
+NWdays: currentNWdays,
         lastReported: currentApproval?.lastReported || "-",
       });
     }
