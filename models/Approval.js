@@ -187,6 +187,16 @@ const approvalSchema = new mongoose.Schema(
       type: String,
     },
 
+    normalExpTotal: {
+      type: Number,
+      default: 0,
+    },
+
+    otherExpTotal: {
+      type: Number,
+      default: 0,
+    },
+
     approvedByUser: {
       type: Boolean,
       default: false,

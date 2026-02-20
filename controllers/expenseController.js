@@ -12,6 +12,69 @@ const getMonthFromDate = (dateObj) => {
   return MONTHS[dateObj.getMonth()];
 };
 
+const recalculateNormalExpTotal = async (userId, monthString) => {
+  const monthIndex = MONTHS.indexOf(monthString);
+  const year = new Date().getFullYear();
+
+  const startOfMonth = new Date(year, monthIndex, 1);
+  const endOfMonth = new Date(year, monthIndex + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+
+  const result = await NormalExpense.aggregate([
+    {
+      $match: {
+        user: userId,
+        date: { $gte: startOfMonth, $lte: endOfMonth },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$total" },
+      },
+    },
+  ]);
+
+  const total = result[0]?.total || 0;
+
+  await Approval.updateOne(
+    { user: userId, month: monthString },
+    { $set: { normalExpTotal: total } }
+  );
+};
+
+const recalculateOtherExpTotal = async (userId, monthString) => {
+  const monthIndex = MONTHS.indexOf(monthString);
+  const year = new Date().getFullYear();
+
+  const startOfMonth = new Date(year, monthIndex, 1);
+  const endOfMonth = new Date(year, monthIndex + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+
+  const result = await OtherExpense.aggregate([
+    {
+      $match: {
+        user: userId,
+        date: { $gte: startOfMonth, $lte: endOfMonth },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$total" },
+      },
+    },
+  ]);
+
+  const total = result[0]?.total || 0;
+
+  await Approval.updateOne(
+    { user: userId, month: monthString },
+    { $set: { otherExpTotal: total } }
+  );
+};
+
+
 const recalculateNWDays = async (userId, monthString) => {
   const monthIndex = MONTHS.indexOf(monthString);
 
@@ -173,6 +236,13 @@ exports.updateNormalExpense = async (req, res) => {
 
     await expense.save();
 
+    const monthString = getMonthFromDate(expense.date);
+await recalculateNormalExpTotal(expense.user, monthString);
+
+if (expense.workType === "NW") {
+  await recalculateNWDays(expense.user, monthString);
+}
+
     res.status(200).json({
       message: "Normal expense updated successfully",
       expense,
@@ -222,6 +292,8 @@ exports.updateOtherExpense = async (req, res) => {
       Number(expense.extraAmount || 0);
 
     await expense.save();
+    const monthString = getMonthFromDate(expense.date);
+await recalculateOtherExpTotal(expense.user, monthString);
 
     res.status(200).json({
       message: "Other expense updated successfully",
@@ -256,8 +328,11 @@ exports.deleteNormalExpense = async (req, res) => {
     }
 
     await expense.deleteOne();
-    if (expense.workType === "NW") {
-  const monthString = getMonthFromDate(expense.date);
+   const monthString = getMonthFromDate(expense.date);
+
+await recalculateNormalExpTotal(expense.user, monthString);
+
+if (expense.workType === "NW") {
   await recalculateNWDays(expense.user, monthString);
 }
 
@@ -290,6 +365,9 @@ exports.deleteOtherExpense = async (req, res) => {
     }
 
     await expense.deleteOne();
+
+    const monthString = getMonthFromDate(expense.date);
+await recalculateOtherExpTotal(expense.user, monthString);
 
     res.json({ message: "Other expense deleted successfully" });
   } catch (err) {

@@ -1,104 +1,319 @@
+// // const User = require("../models/User");
+// // const Approval = require("../models/Approval");
+// // const SRC = require("../models/SRC");
+
+// // const MONTHS = [
+// //   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+// //   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+// // ];
+
+// // const getCurrentMonth = () => {
+// //   const now = new Date();
+// //   return MONTHS[now.getMonth()];
+// // };
+
+
+// // /* =========================================
+// //    ADMIN DASHBOARD SUMMARY
+// // ========================================= */
+// // exports.getAdminDashboard = async (req, res) => {
+// //   try {
+// //     const requester = req.user;
+
+// //     if (requester.role !== "admin") {
+// //       return res.status(403).json({ message: "Not authorized" });
+// //     }
+
+// //     const currentMonth = getCurrentMonth();
+// //     const prevMonth =
+// //       MONTHS[(MONTHS.indexOf(currentMonth) - 1 + 12) % 12];
+
+// //     const users = await User.find({
+// //       company: requester.company,
+// //       isActive: true,
+// //       role: { $ne: "admin" },
+// //     }).select("_id userId username role");
+
+// //     const dashboardData = [];
+
+// //     for (const user of users) {
+// //       const hq = await SRC.findOne({
+// //         user: user._id,
+// //         station: "HQ",
+// //       }).select("placeOfWork");
+
+// //       const approvals = await Approval.find({
+// //         user: user._id,
+// //         month: { $in: [currentMonth, prevMonth] },
+// //       });
+
+// //       const currentApproval = approvals.find(
+// //         (a) => a.month === currentMonth
+// //       );
+
+// //       const prevApproval = approvals.find(
+// //         (a) => a.month === prevMonth
+// //       );
+
+// //       dashboardData.push({
+// //         _id: user._id,
+// //         userId: user.userId,
+// //         username: user.username,
+// //         role: user.role,
+// //         hq: hq?.placeOfWork || "-",
+
+// //         currentMonth: {
+// //           month: currentMonth,
+// //           normal: currentApproval?.normalExpTotal || 0,
+// //           other: currentApproval?.otherExpTotal || 0,
+// //           total:
+// //             (currentApproval?.normalExpTotal || 0) +
+// //             (currentApproval?.otherExpTotal || 0),
+// //           approvedByUser:
+// //             currentApproval?.approvedByUser || false,
+// //           approvedBySuperior:
+// //             currentApproval?.approvedBySuperior || false,
+// //         },
+
+// //         prevMonth: {
+// //           month: prevMonth,
+// //           normal: prevApproval?.normalExpTotal || 0,
+// //           other: prevApproval?.otherExpTotal || 0,
+// //           total:
+// //             (prevApproval?.normalExpTotal || 0) +
+// //             (prevApproval?.otherExpTotal || 0),
+// //           approvedByUser:
+// //             prevApproval?.approvedByUser || false,
+// //           approvedBySuperior:
+// //             prevApproval?.approvedBySuperior || false,
+// //         },
+
+// //         NWdays: currentApproval?.NWdays || 0,
+// //         lastReported: currentApproval?.lastReported || "-",
+// //       });
+// //     }
+
+// //     res.json(dashboardData);
+// //   } catch (err) {
+// //     console.error(err);
+// //     res.status(500).json({ message: "Server error" });
+// //   }
+// // };
+
+
+
+
+
+
 // const User = require("../models/User");
 // const Approval = require("../models/Approval");
 // const SRC = require("../models/SRC");
+// const NormalExpense = require("../models/NormalExpense");
+// const OtherExpense = require("../models/OtherExpense");
 
 // const MONTHS = [
 //   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
 //   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
 // ];
 
-// const getCurrentMonth = () => {
-//   const now = new Date();
-//   return MONTHS[now.getMonth()];
+// const getCurrentMonthIndex = () => {
+//   return new Date().getMonth();
+// };
+
+// const getMonthDateRange = (monthIndex, year) => {
+//   const start = new Date(year, monthIndex, 1);
+//   const end = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+//   return { start, end };
 // };
 
 
-// /* =========================================
-//    ADMIN DASHBOARD SUMMARY
-// ========================================= */
-// exports.getAdminDashboard = async (req, res) => {
-//   try {
-//     const requester = req.user;
 
-//     if (requester.role !== "admin") {
-//       return res.status(403).json({ message: "Not authorized" });
-//     }
 
-//     const currentMonth = getCurrentMonth();
-//     const prevMonth =
-//       MONTHS[(MONTHS.indexOf(currentMonth) - 1 + 12) % 12];
+// // /* =========================================
+// //    ADMIN DASHBOARD SUMMARY (LIVE TOTALS)
+// // ========================================= */
+// // exports.getAdminDashboard = async (req, res) => {
+// //   try {
+// //     const requester = req.user;
 
-//     const users = await User.find({
-//       company: requester.company,
-//       isActive: true,
-//       role: { $ne: "admin" },
-//     }).select("_id userId username role");
+// //     if (requester.role !== "admin") {
+// //       return res.status(403).json({ message: "Not authorized" });
+// //     }
 
-//     const dashboardData = [];
+// //     const now = new Date();
+// //     const year = now.getFullYear();
 
-//     for (const user of users) {
-//       const hq = await SRC.findOne({
-//         user: user._id,
-//         station: "HQ",
-//       }).select("placeOfWork");
+// //     const currentMonthIndex = getCurrentMonthIndex();
+// //     const prevMonthIndex =
+// //       (currentMonthIndex - 1 + 12) % 12;
 
-//       const approvals = await Approval.find({
-//         user: user._id,
-//         month: { $in: [currentMonth, prevMonth] },
-//       });
+// //     const currentMonthCode = MONTHS[currentMonthIndex];
+// //     const prevMonthCode = MONTHS[prevMonthIndex];
 
-//       const currentApproval = approvals.find(
-//         (a) => a.month === currentMonth
-//       );
+// //     const { start: currentStart, end: currentEnd } =
+// //       getMonthDateRange(currentMonthIndex, year);
 
-//       const prevApproval = approvals.find(
-//         (a) => a.month === prevMonth
-//       );
+// //     const { start: prevStart, end: prevEnd } =
+// //       getMonthDateRange(prevMonthIndex, year);
 
-//       dashboardData.push({
-//         _id: user._id,
-//         userId: user.userId,
-//         username: user.username,
-//         role: user.role,
-//         hq: hq?.placeOfWork || "-",
+// //     const users = await User.find({
+// //       company: requester.company,
+// //       isActive: true,
+// //       role: { $ne: "admin" },
+// //     }).select("_id userId username role");
 
-//         currentMonth: {
-//           month: currentMonth,
-//           normal: currentApproval?.normalExpTotal || 0,
-//           other: currentApproval?.otherExpTotal || 0,
-//           total:
-//             (currentApproval?.normalExpTotal || 0) +
-//             (currentApproval?.otherExpTotal || 0),
-//           approvedByUser:
-//             currentApproval?.approvedByUser || false,
-//           approvedBySuperior:
-//             currentApproval?.approvedBySuperior || false,
-//         },
+// //     const dashboardData = [];
 
-//         prevMonth: {
-//           month: prevMonth,
-//           normal: prevApproval?.normalExpTotal || 0,
-//           other: prevApproval?.otherExpTotal || 0,
-//           total:
-//             (prevApproval?.normalExpTotal || 0) +
-//             (prevApproval?.otherExpTotal || 0),
-//           approvedByUser:
-//             prevApproval?.approvedByUser || false,
-//           approvedBySuperior:
-//             prevApproval?.approvedBySuperior || false,
-//         },
+// //     for (const user of users) {
 
-//         NWdays: currentApproval?.NWdays || 0,
-//         lastReported: currentApproval?.lastReported || "-",
-//       });
-//     }
+// //       const hq = await SRC.findOne({
+// //         user: user._id,
+// //         station: "HQ",
+// //       }).select("placeOfWork");
 
-//     res.json(dashboardData);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// };
+// //       const approvals = await Approval.find({
+// //         user: user._id,
+// //         month: { $in: [currentMonthCode, prevMonthCode] },
+// //       });
+
+// //       const currentApproval = approvals.find(
+// //         (a) => a.month === currentMonthCode
+// //       );
+
+// //       const prevApproval = approvals.find(
+// //         (a) => a.month === prevMonthCode
+// //       );
+
+// //       // 🔥 NORMAL EXPENSE TOTAL (CURRENT)
+// //       const currentNormal = await NormalExpense.aggregate([
+// //         {
+// //           $match: {
+// //             user: user._id,
+// //             date: { $gte: currentStart, $lte: currentEnd },
+// //           },
+// //         },
+// //         {
+// //           $group: {
+// //             _id: null,
+// //             total: { $sum: "$total" },
+// //           },
+// //         },
+// //       ]);
+
+// //       // 🔥 OTHER EXPENSE TOTAL (CURRENT)
+// //       const currentOther = await OtherExpense.aggregate([
+// //         {
+// //           $match: {
+// //             user: user._id,
+// //             date: { $gte: currentStart, $lte: currentEnd },
+// //           },
+// //         },
+// //         {
+// //           $group: {
+// //             _id: null,
+// //             total: { $sum: "$total" },
+// //           },
+// //         },
+// //       ]);
+
+// //       // 🔥 NORMAL EXPENSE TOTAL (PREV)
+// //       const prevNormal = await NormalExpense.aggregate([
+// //         {
+// //           $match: {
+// //             user: user._id,
+// //             date: { $gte: prevStart, $lte: prevEnd },
+// //           },
+// //         },
+// //         {
+// //           $group: {
+// //             _id: null,
+// //             total: { $sum: "$total" },
+// //           },
+// //         },
+// //       ]);
+
+// //       // 🔥 OTHER EXPENSE TOTAL (PREV)
+// //       const prevOther = await OtherExpense.aggregate([
+// //         {
+// //           $match: {
+// //             user: user._id,
+// //             date: { $gte: prevStart, $lte: prevEnd },
+// //           },
+// //         },
+// //         {
+// //           $group: {
+// //             _id: null,
+// //             total: { $sum: "$total" },
+// //           },
+// //         },
+// //       ]);
+
+// //       const currentTotal =
+// //         (currentNormal[0]?.total || 0) +
+// //         (currentOther[0]?.total || 0);
+
+// //       const prevTotal =
+// //         (prevNormal[0]?.total || 0) +
+// //         (prevOther[0]?.total || 0);
+
+// //         // 🔥 NW DAYS CALCULATION (LIVE)
+// // const currentNWdays = await NormalExpense.countDocuments({
+// //   user: user._id,
+// //   date: { $gte: currentStart, $lte: currentEnd },
+// // });
+
+// // const prevNWdays = await NormalExpense.countDocuments({
+// //   user: user._id,
+// //   date: { $gte: prevStart, $lte: prevEnd },
+// // });
+
+// //       dashboardData.push({
+// //         _id: user._id,
+// //         userId: user.userId,
+// //         username: user.username,
+// //         role: user.role,
+// //         hq: hq?.placeOfWork || "-",
+
+// //         currentMonth: {
+// //   month: currentMonthCode,
+// //   total: currentTotal,
+// //   approvedByUser:
+// //     currentApproval?.approvedByUser || false,
+// //   approvedBySuperior:
+// //     currentApproval?.approvedBySuperior || false,
+// //   NWdays: currentNWdays,
+// // },
+
+// // prevMonth: {
+// //   month: prevMonthCode,
+// //   total: prevTotal,
+// //   approvedByUser:
+// //     prevApproval?.approvedByUser || false,
+// //   approvedBySuperior:
+// //     prevApproval?.approvedBySuperior || false,
+// //   NWdays: prevNWdays,
+// // },
+
+// // NWdays: currentNWdays,
+// //         lastReported: currentApproval?.lastReported || "-",
+// //       });
+// //     }
+
+// //     res.json(dashboardData);
+
+// //   } catch (err) {
+// //     console.error(err);
+// //     res.status(500).json({ message: "Server error" });
+// //   }
+// // };
+
+
+
+
+
+
+
+
 
 
 
@@ -108,8 +323,6 @@
 const User = require("../models/User");
 const Approval = require("../models/Approval");
 const SRC = require("../models/SRC");
-const NormalExpense = require("../models/NormalExpense");
-const OtherExpense = require("../models/OtherExpense");
 
 const MONTHS = [
   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
@@ -120,14 +333,8 @@ const getCurrentMonthIndex = () => {
   return new Date().getMonth();
 };
 
-const getMonthDateRange = (monthIndex, year) => {
-  const start = new Date(year, monthIndex, 1);
-  const end = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
-  return { start, end };
-};
-
 /* =========================================
-   ADMIN DASHBOARD SUMMARY (LIVE TOTALS)
+   ADMIN DASHBOARD SUMMARY (STORED TOTALS)
 ========================================= */
 exports.getAdminDashboard = async (req, res) => {
   try {
@@ -138,8 +345,6 @@ exports.getAdminDashboard = async (req, res) => {
     }
 
     const now = new Date();
-    const year = now.getFullYear();
-
     const currentMonthIndex = getCurrentMonthIndex();
     const prevMonthIndex =
       (currentMonthIndex - 1 + 12) % 12;
@@ -147,17 +352,18 @@ exports.getAdminDashboard = async (req, res) => {
     const currentMonthCode = MONTHS[currentMonthIndex];
     const prevMonthCode = MONTHS[prevMonthIndex];
 
-    const { start: currentStart, end: currentEnd } =
-      getMonthDateRange(currentMonthIndex, year);
-
-    const { start: prevStart, end: prevEnd } =
-      getMonthDateRange(prevMonthIndex, year);
-
+    // 🔹 Fetch all active non-admin users of same company
     const users = await User.find({
       company: requester.company,
       isActive: true,
       role: { $ne: "admin" },
     }).select("_id userId username role");
+
+    // 🔹 Fetch all approvals for current + prev month in ONE query
+    const approvals = await Approval.find({
+      user: { $in: users.map(u => u._id) },
+      month: { $in: [currentMonthCode, prevMonthCode] },
+    });
 
     const dashboardData = [];
 
@@ -168,101 +374,28 @@ exports.getAdminDashboard = async (req, res) => {
         station: "HQ",
       }).select("placeOfWork");
 
-      const approvals = await Approval.find({
-        user: user._id,
-        month: { $in: [currentMonthCode, prevMonthCode] },
-      });
-
       const currentApproval = approvals.find(
-        (a) => a.month === currentMonthCode
+        (a) =>
+          a.user.toString() === user._id.toString() &&
+          a.month === currentMonthCode
       );
 
       const prevApproval = approvals.find(
-        (a) => a.month === prevMonthCode
+        (a) =>
+          a.user.toString() === user._id.toString() &&
+          a.month === prevMonthCode
       );
 
-      // 🔥 NORMAL EXPENSE TOTAL (CURRENT)
-      const currentNormal = await NormalExpense.aggregate([
-        {
-          $match: {
-            user: user._id,
-            date: { $gte: currentStart, $lte: currentEnd },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$total" },
-          },
-        },
-      ]);
+      const currentNormal = currentApproval?.normalExpTotal || 0;
+      const currentOther = currentApproval?.otherExpTotal || 0;
+      const currentTotal = currentNormal + currentOther;
 
-      // 🔥 OTHER EXPENSE TOTAL (CURRENT)
-      const currentOther = await OtherExpense.aggregate([
-        {
-          $match: {
-            user: user._id,
-            date: { $gte: currentStart, $lte: currentEnd },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$total" },
-          },
-        },
-      ]);
+      const prevNormal = prevApproval?.normalExpTotal || 0;
+      const prevOther = prevApproval?.otherExpTotal || 0;
+      const prevTotal = prevNormal + prevOther;
 
-      // 🔥 NORMAL EXPENSE TOTAL (PREV)
-      const prevNormal = await NormalExpense.aggregate([
-        {
-          $match: {
-            user: user._id,
-            date: { $gte: prevStart, $lte: prevEnd },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$total" },
-          },
-        },
-      ]);
-
-      // 🔥 OTHER EXPENSE TOTAL (PREV)
-      const prevOther = await OtherExpense.aggregate([
-        {
-          $match: {
-            user: user._id,
-            date: { $gte: prevStart, $lte: prevEnd },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$total" },
-          },
-        },
-      ]);
-
-      const currentTotal =
-        (currentNormal[0]?.total || 0) +
-        (currentOther[0]?.total || 0);
-
-      const prevTotal =
-        (prevNormal[0]?.total || 0) +
-        (prevOther[0]?.total || 0);
-
-        // 🔥 NW DAYS CALCULATION (LIVE)
-const currentNWdays = await NormalExpense.countDocuments({
-  user: user._id,
-  date: { $gte: currentStart, $lte: currentEnd },
-});
-
-const prevNWdays = await NormalExpense.countDocuments({
-  user: user._id,
-  date: { $gte: prevStart, $lte: prevEnd },
-});
+      const currentNWdays = currentApproval?.NWdays || 0;
+      const prevNWdays = prevApproval?.NWdays || 0;
 
       dashboardData.push({
         _id: user._id,
@@ -272,26 +405,26 @@ const prevNWdays = await NormalExpense.countDocuments({
         hq: hq?.placeOfWork || "-",
 
         currentMonth: {
-  month: currentMonthCode,
-  total: currentTotal,
-  approvedByUser:
-    currentApproval?.approvedByUser || false,
-  approvedBySuperior:
-    currentApproval?.approvedBySuperior || false,
-  NWdays: currentNWdays,
-},
+          month: currentMonthCode,
+          total: currentTotal,
+          approvedByUser:
+            currentApproval?.approvedByUser || false,
+          approvedBySuperior:
+            currentApproval?.approvedBySuperior || false,
+          NWdays: currentNWdays,
+        },
 
-prevMonth: {
-  month: prevMonthCode,
-  total: prevTotal,
-  approvedByUser:
-    prevApproval?.approvedByUser || false,
-  approvedBySuperior:
-    prevApproval?.approvedBySuperior || false,
-  NWdays: prevNWdays,
-},
+        prevMonth: {
+          month: prevMonthCode,
+          total: prevTotal,
+          approvedByUser:
+            prevApproval?.approvedByUser || false,
+          approvedBySuperior:
+            prevApproval?.approvedBySuperior || false,
+          NWdays: prevNWdays,
+        },
 
-NWdays: currentNWdays,
+        NWdays: currentNWdays,
         lastReported: currentApproval?.lastReported || "-",
       });
     }

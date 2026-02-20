@@ -475,6 +475,67 @@ const recalculateNWDays = async (userId, monthString) => {
   );
 };
 
+const recalculateNormalExpTotal = async (userId, monthString) => {
+  const monthIndex = MONTHS.indexOf(monthString);
+  const year = new Date().getFullYear();
+
+  const startOfMonth = new Date(year, monthIndex, 1);
+  const endOfMonth = new Date(year, monthIndex + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+
+  const result = await NormalExpense.aggregate([
+    {
+      $match: {
+        user: userId,
+        date: { $gte: startOfMonth, $lte: endOfMonth },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$total" },
+      },
+    },
+  ]);
+
+  const total = result[0]?.total || 0;
+
+  await Approval.updateOne(
+    { user: userId, month: monthString },
+    { $set: { normalExpTotal: total } }
+  );
+};
+
+const recalculateOtherExpTotal = async (userId, monthString) => {
+  const monthIndex = MONTHS.indexOf(monthString);
+  const year = new Date().getFullYear();
+
+  const startOfMonth = new Date(year, monthIndex, 1);
+  const endOfMonth = new Date(year, monthIndex + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
+
+  const result = await OtherExpense.aggregate([
+    {
+      $match: {
+        user: userId,
+        date: { $gte: startOfMonth, $lte: endOfMonth },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$total" },
+      },
+    },
+  ]);
+
+  const total = result[0]?.total || 0;
+
+  await Approval.updateOne(
+    { user: userId, month: monthString },
+    { $set: { otherExpTotal: total } }
+  );
+};
 
 const formatTime = () => {
   const now = new Date();
@@ -629,6 +690,8 @@ exports.createFWExpense = async (req, res) => {
       total: calc.total,
     });
 
+    
+
    await Approval.updateOne(
   { user: userId, month: currentMonth },
   {
@@ -642,6 +705,10 @@ exports.createFWExpense = async (req, res) => {
       expense,
       displayDate: formatDate(today),
     });
+
+    const expenseMonth = getMonthFromDate(today);
+
+await recalculateNormalExpTotal(userId, expenseMonth);
 
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -703,12 +770,11 @@ exports.createNFWExpense = async (req, res) => {
       total,
     });
 
-    await Approval.updateOne(
+   await recalculateNormalExpTotal(userId, currentMonth);
+
+await Approval.updateOne(
   { user: userId, month: currentMonth },
-  {
-    $inc: { normalExpTotal: total },
-    $set: { lastReported: formatDate() },
-  }
+  { $set: { lastReported: formatDate() } }
 );
 
 
@@ -786,6 +852,7 @@ exports.createNWExpense = async (req, res) => {
 
     // ✅ Increment NWdays
     await recalculateNWDays(userId, expenseMonth);
+    await recalculateNormalExpTotal(userId, expenseMonth);
 
 await Approval.updateOne(
   { user: userId, month: expenseMonth },
@@ -888,6 +955,7 @@ exports.createOtherExpense = async (req, res) => {
     const userId = req.user.id;
     const { date, amount, description, billNo } = req.body;
 
+
     if (!date || amount == null || !description) {
       return res.status(400).json({
         message: "Date, amount and description are required",
@@ -938,6 +1006,12 @@ exports.createOtherExpense = async (req, res) => {
     });
 
     const expenseMonth = getMonthFromDate(parsedDate);
+    await recalculateOtherExpTotal(userId, expenseMonth);
+
+await Approval.updateOne(
+  { user: userId, month: expenseMonth },
+  { $set: { lastReported: formatDate() } }
+);
 
 await Approval.updateOne(
   { user: userId, month: expenseMonth },
