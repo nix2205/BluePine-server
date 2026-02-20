@@ -304,6 +304,51 @@ const getLastThreeMonths = () => {
 // };
 
 
+// exports.ensureMonthlyApprovals = async () => {
+
+//   const now = new Date();
+//   const currentMonth = getCurrentMonth();
+
+//   const users = await User.find();
+
+//   for (const user of users) {
+//     await Approval.findOneAndUpdate(
+//       { user: user._id, month: currentMonth },
+//       {
+//         user: user._id,
+//         month: currentMonth,
+//         NWdays: 0,
+//         lastReported: null,
+//         approvedByUser: false,
+//         approvedBySuperior: false,
+//       },
+//       { upsert: true }
+//     );
+//   }
+
+//   // Keep only last 3 months
+//   const allowedMonths = getLastThreeMonths();
+
+//   await Approval.deleteMany({
+//     month: { $nin: allowedMonths }
+//   });
+
+//   // Delete old expenses
+//   const thresholdDate = new Date(
+//     now.getFullYear(),
+//     now.getMonth() - 2,
+//     1
+//   );
+
+//   await NormalExpense.deleteMany({
+//     date: { $lt: thresholdDate }
+//   });
+
+//   await OtherExpense.deleteMany({
+//     date: { $lt: thresholdDate }
+//   });
+// };
+
 exports.ensureMonthlyApprovals = async () => {
 
   const now = new Date();
@@ -315,25 +360,25 @@ exports.ensureMonthlyApprovals = async () => {
     await Approval.findOneAndUpdate(
       { user: user._id, month: currentMonth },
       {
-        user: user._id,
-        month: currentMonth,
-        NWdays: 0,
-        lastReported: null,
-        approvedByUser: false,
-        approvedBySuperior: false,
+        $setOnInsert: {
+          user: user._id,
+          month: currentMonth,
+          NWdays: 0,
+          lastReported: null,
+          approvedByUser: false,
+          approvedBySuperior: false,
+        }
       },
       { upsert: true }
     );
   }
 
-  // Keep only last 3 months
   const allowedMonths = getLastThreeMonths();
 
   await Approval.deleteMany({
     month: { $nin: allowedMonths }
   });
 
-  // Delete old expenses
   const thresholdDate = new Date(
     now.getFullYear(),
     now.getMonth() - 2,
