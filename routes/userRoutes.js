@@ -78,7 +78,7 @@ const { getHierarchy } = require("../controllers/userHierarchyController");
 const { reassignSuperior } = require("../controllers/reassignController");
 
 // Create user
-router.post("/create", protect, adminOnly, createUser);
+router.post("/create", protect, createUser);
 
 // Search users
 router.get("/search", protect, searchUsers);
@@ -87,7 +87,7 @@ router.get("/search", protect, searchUsers);
 router.get("/hierarchy", protect, getHierarchy);
 
 // Reassign superior
-router.put("/reassign-superior", protect, adminOnly, reassignSuperior);
+router.put("/reassign-superior", protect, reassignSuperior);
 
 router.delete("/:id", protect , deleteUser);
 
