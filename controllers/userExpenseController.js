@@ -414,6 +414,248 @@
 
 
 
+// const NormalExpense = require("../models/NormalExpense");
+// const SRC = require("../models/SRC");
+// const SRCConfig = require("../models/SRCConfig");
+// const calculateFWExpense = require("../utils/fwCalculator");
+// const haversineDistance = require("../utils/haversineDistance");
+// const CityMap = require("../models/CityMap");
+// const OtherExpense = require("../models/OtherExpense");
+
+// const Approval = require("../models/Approval");
+// const { ensureMonthlyApprovals } = require("./approvalController");
+
+// // Month helper
+// const MONTHS = [
+//   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+//   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+// ];
+
+// const getMonthFromDate = (dateObj) => {
+//   return MONTHS[dateObj.getMonth()];
+// };
+
+
+// const getCurrentMonth = () => {
+//   const now = new Date();
+//   return MONTHS[now.getMonth()];
+// };
+
+
+
+
+// // Helpers
+// const formatDate = () => {
+//   const now = new Date();
+//   const day = String(now.getDate()).padStart(2, "0");
+//   const month = String(now.getMonth() + 1).padStart(2, "0");
+//   const year = String(now.getFullYear()).slice(-2);
+//   return `${day}/${month}/${year}`;
+// };
+
+// const recalculateNWDays = async (userId, monthString) => {
+//   const monthIndex = MONTHS.indexOf(monthString);
+
+//   const now = new Date();
+//   const year = now.getFullYear(); // assuming same year system
+
+//   // const startOfMonth = new Date(year, monthIndex, 1);
+//   // const endOfMonth = new Date(year, monthIndex + 1, 0);
+//   // endOfMonth.setHours(23, 59, 59, 999);
+//   const startOfMonth = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0));
+// const endOfMonth = new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999));
+
+
+//   const count = await NormalExpense.countDocuments({
+//     user: userId,
+//     workType: "NW",
+//     date: { $gte: startOfMonth, $lte: endOfMonth }
+//   });
+
+//   await Approval.updateOne(
+//     { user: userId, month: monthString },
+//     { $set: { NWdays: count } }
+//   );
+// };
+
+// const recalculateTRDays = async (userId, monthString) => {
+//   const monthIndex = MONTHS.indexOf(monthString);
+//   const year = new Date().getFullYear();
+
+//   const startOfMonth = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0));
+//   const endOfMonth = new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999));
+
+//   const uniqueDates = await NormalExpense.aggregate([
+//     {
+//       $match: {
+//         user: userId,
+//         date: { $gte: startOfMonth, $lte: endOfMonth },
+//       },
+//     },
+//     {
+//       $group: {
+//         _id: {
+//           $dateToString: { format: "%Y-%m-%d", date: "$date" },
+//         },
+//       },
+//     },
+//     {
+//       $count: "totalDays",
+//     },
+//   ]);
+
+//   const totalReportingDays = uniqueDates[0]?.totalDays || 0;
+
+//   await Approval.updateOne(
+//     { user: userId, month: monthString },
+//     { $set: { TR: totalReportingDays } }
+//   );
+// };
+
+// // const recalculateNormalExpTotal = async (userId, monthString) => {
+// //   const monthIndex = MONTHS.indexOf(monthString);
+// //   const year = new Date().getFullYear();
+
+// //   const startOfMonth = new Date(year, monthIndex, 1);
+// //   const endOfMonth = new Date(year, monthIndex + 1, 0);
+// //   endOfMonth.setHours(23, 59, 59, 999);
+
+// //   const result = await NormalExpense.aggregate([
+// //     {
+// //       $match: {
+// //         user: userId,
+// //         date: { $gte: startOfMonth, $lte: endOfMonth },
+// //       },
+// //     },
+// //     {
+// //       $group: {
+// //         _id: null,
+// //         total: { $sum: "$total" },
+// //       },
+// //     },
+// //   ]);
+
+// //   const total = result[0]?.total || 0;
+
+// //   await Approval.updateOne(
+// //     { user: userId, month: monthString },
+// //     { $set: { normalExpTotal: total } }
+// //   );
+// // };
+
+// const recalculateNormalExpTotal = async (userId, monthString) => {
+//   console.log("RecalculateNormalExpTotal called");
+//   console.log("User:", userId);
+//   console.log("Month:", monthString);
+
+//   const monthIndex = MONTHS.indexOf(monthString);
+//   const year = new Date().getFullYear();
+
+//   // const startOfMonth = new Date(year, monthIndex, 1);
+//   // const endOfMonth = new Date(year, monthIndex + 1, 0);
+//   // endOfMonth.setHours(23, 59, 59, 999);
+//   const startOfMonth = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0));
+// const endOfMonth = new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999));
+
+//   console.log("StartOfMonth:", startOfMonth);
+//   console.log("EndOfMonth:", endOfMonth);
+
+//   const result = await NormalExpense.aggregate([
+//     {
+//       $match: {
+//         user: userId,
+//         date: { $gte: startOfMonth, $lte: endOfMonth },
+//       },
+//     },
+//     {
+//       $group: {
+//         _id: null,
+//         total: { $sum: "$total" },
+//       },
+//     },
+//   ]);
+
+//   console.log("Aggregation Result:", result);
+
+//   const total = result[0]?.total || 0;
+
+//   const updateResult = await Approval.updateOne(
+//     { user: userId, month: monthString },
+//     { $set: { normalExpTotal: total } }
+//   );
+
+//   console.log("Update Result:", updateResult);
+// };
+
+// const recalculateOtherExpTotal = async (userId, monthString) => {
+//   const monthIndex = MONTHS.indexOf(monthString);
+//   const year = new Date().getFullYear();
+
+//   // const startOfMonth = new Date(year, monthIndex, 1);
+//   // const endOfMonth = new Date(year, monthIndex + 1, 0);
+//   // endOfMonth.setHours(23, 59, 59, 999);
+
+//   const startOfMonth = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0));
+// const endOfMonth = new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999));
+
+//   const result = await OtherExpense.aggregate([
+//     {
+//       $match: {
+//         user: userId,
+//         date: { $gte: startOfMonth, $lte: endOfMonth },
+//       },
+//     },
+//     {
+//       $group: {
+//         _id: null,
+//         total: { $sum: "$total" },
+//       },
+//     },
+//   ]);
+
+//   const total = result[0]?.total || 0;
+
+//   await Approval.updateOne(
+//     { user: userId, month: monthString },
+//     { $set: { otherExpTotal: total } }
+//   );
+// };
+
+// const formatTime = () => {
+//   const now = new Date();
+//   const hours = String(now.getHours()).padStart(2, "0");
+//   const minutes = String(now.getMinutes()).padStart(2, "0");
+//   return `${hours}:${minutes}`;
+// };
+
+// // const checkAlreadySubmittedToday = async (userId, dateObj) => {
+// //   const start = new Date(dateObj);
+// //   start.setHours(0, 0, 0, 0);
+
+// //   const end = new Date(dateObj);
+// //   end.setHours(23, 59, 59, 999);
+
+// //   return await NormalExpense.findOne({
+// //     user: userId,
+// //     date: { $gte: start, $lte: end },
+// //   });
+// // };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const NormalExpense = require("../models/NormalExpense");
 const SRC = require("../models/SRC");
 const SRCConfig = require("../models/SRCConfig");
@@ -421,30 +663,23 @@ const calculateFWExpense = require("../utils/fwCalculator");
 const haversineDistance = require("../utils/haversineDistance");
 const CityMap = require("../models/CityMap");
 const OtherExpense = require("../models/OtherExpense");
-
 const Approval = require("../models/Approval");
 const { ensureMonthlyApprovals } = require("./approvalController");
 
-// Month helper
 const MONTHS = [
-  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+  "JAN","FEB","MAR","APR","MAY","JUN",
+  "JUL","AUG","SEP","OCT","NOV","DEC"
 ];
 
 const getMonthFromDate = (dateObj) => {
   return MONTHS[dateObj.getMonth()];
 };
 
-
 const getCurrentMonth = () => {
   const now = new Date();
   return MONTHS[now.getMonth()];
 };
 
-
-
-
-// Helpers
 const formatDate = () => {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, "0");
@@ -453,15 +688,34 @@ const formatDate = () => {
   return `${day}/${month}/${year}`;
 };
 
-const recalculateNWDays = async (userId, monthString) => {
-  const monthIndex = MONTHS.indexOf(monthString);
-
+const formatTime = () => {
   const now = new Date();
-  const year = now.getFullYear(); // assuming same year system
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
+/* ===========================
+   FIXED MONTH BOUNDARY LOGIC
+   =========================== */
+
+const getMonthRange = (monthString) => {
+  const monthIndex = MONTHS.indexOf(monthString);
+  const year = new Date().getFullYear();
 
   const startOfMonth = new Date(year, monthIndex, 1);
   const endOfMonth = new Date(year, monthIndex + 1, 0);
   endOfMonth.setHours(23, 59, 59, 999);
+
+  return { startOfMonth, endOfMonth };
+};
+
+/* ===========================
+   RECALCULATIONS
+   =========================== */
+
+const recalculateNWDays = async (userId, monthString) => {
+  const { startOfMonth, endOfMonth } = getMonthRange(monthString);
 
   const count = await NormalExpense.countDocuments({
     user: userId,
@@ -475,27 +729,108 @@ const recalculateNWDays = async (userId, monthString) => {
   );
 };
 
-const recalculateNormalExpTotal = async (userId, monthString) => {
-  const monthIndex = MONTHS.indexOf(monthString);
-  const year = new Date().getFullYear();
+// const recalculateTRDays = async (userId, monthString) => {
+//   const { startOfMonth, endOfMonth } = getMonthRange(monthString);
 
-  const startOfMonth = new Date(year, monthIndex, 1);
-  const endOfMonth = new Date(year, monthIndex + 1, 0);
-  endOfMonth.setHours(23, 59, 59, 999);
+//   const uniqueDates = await NormalExpense.aggregate([
+//     {
+//       $match: {
+//         user: userId,
+//         date: { $gte: startOfMonth, $lte: endOfMonth }
+//       }
+//     },
+//     {
+//       $group: {
+//         _id: {
+//           $dateToString: { format: "%Y-%m-%d", date: "$date" }
+//         }
+//       }
+//     },
+//     {
+//       $count: "totalDays"
+//     }
+//   ]);
+
+//   const totalReportingDays = uniqueDates[0]?.totalDays || 0;
+
+//   await Approval.updateOne(
+//     { user: userId, month: monthString },
+//     { $set: { TR: totalReportingDays } }
+//   );
+// };
+
+// const recalculateNormalExpTotal = async (userId, monthString) => {
+//   const { startOfMonth, endOfMonth } = getMonthRange(monthString);
+
+//   const result = await NormalExpense.aggregate([
+//     {
+//       $match: {
+//         user: userId,
+//         date: { $gte: startOfMonth, $lte: endOfMonth }
+//       }
+//     },
+//     {
+//       $group: {
+//         _id: null,
+//         total: { $sum: "$total" }
+//       }
+//     }
+//   ]);
+
+//   const total = result[0]?.total || 0;
+
+//   await Approval.updateOne(
+//     { user: userId, month: monthString },
+//     { $set: { normalExpTotal: total } }
+//   );
+// };
+
+const recalculateTRDays = async (userId, monthString) => {
+  const { startOfMonth, endOfMonth } = getMonthRange(monthString);
+
+  const uniqueDates = await NormalExpense.aggregate([
+    {
+      $match: {
+        user: new mongoose.Types.ObjectId(userId),
+        date: { $gte: startOfMonth, $lte: endOfMonth }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: { format: "%Y-%m-%d", date: "$date" }
+        }
+      }
+    },
+    { $count: "totalDays" }
+  ]);
+
+  const totalReportingDays = uniqueDates[0]?.totalDays || 0;
+
+  await Approval.updateOne(
+    { user: userId, month: monthString },
+    { $set: { TR: totalReportingDays } }
+  );
+};
+
+const mongoose = require("mongoose");
+
+const recalculateNormalExpTotal = async (userId, monthString) => {
+  const { startOfMonth, endOfMonth } = getMonthRange(monthString);
 
   const result = await NormalExpense.aggregate([
     {
       $match: {
-        user: userId,
-        date: { $gte: startOfMonth, $lte: endOfMonth },
-      },
+        user: new mongoose.Types.ObjectId(userId),
+        date: { $gte: startOfMonth, $lte: endOfMonth }
+      }
     },
     {
       $group: {
         _id: null,
-        total: { $sum: "$total" },
-      },
-    },
+        total: { $sum: "$total" }
+      }
+    }
   ]);
 
   const total = result[0]?.total || 0;
@@ -505,28 +840,48 @@ const recalculateNormalExpTotal = async (userId, monthString) => {
     { $set: { normalExpTotal: total } }
   );
 };
+// const recalculateOtherExpTotal = async (userId, monthString) => {
+//   const { startOfMonth, endOfMonth } = getMonthRange(monthString);
+
+//   const result = await OtherExpense.aggregate([
+//     {
+//       $match: {
+//         user: userId,
+//         date: { $gte: startOfMonth, $lte: endOfMonth }
+//       }
+//     },
+//     {
+//       $group: {
+//         _id: null,
+//         total: { $sum: "$total" }
+//       }
+//     }
+//   ]);
+
+//   const total = result[0]?.total || 0;
+
+//   await Approval.updateOne(
+//     { user: userId, month: monthString },
+//     { $set: { otherExpTotal: total } }
+//   );
+// };
 
 const recalculateOtherExpTotal = async (userId, monthString) => {
-  const monthIndex = MONTHS.indexOf(monthString);
-  const year = new Date().getFullYear();
-
-  const startOfMonth = new Date(year, monthIndex, 1);
-  const endOfMonth = new Date(year, monthIndex + 1, 0);
-  endOfMonth.setHours(23, 59, 59, 999);
+  const { startOfMonth, endOfMonth } = getMonthRange(monthString);
 
   const result = await OtherExpense.aggregate([
     {
       $match: {
-        user: userId,
-        date: { $gte: startOfMonth, $lte: endOfMonth },
-      },
+        user: new mongoose.Types.ObjectId(userId),
+        date: { $gte: startOfMonth, $lte: endOfMonth }
+      }
     },
     {
       $group: {
         _id: null,
-        total: { $sum: "$total" },
-      },
-    },
+        total: { $sum: "$total" }
+      }
+    }
   ]);
 
   const total = result[0]?.total || 0;
@@ -537,26 +892,19 @@ const recalculateOtherExpTotal = async (userId, monthString) => {
   );
 };
 
-const formatTime = () => {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
-};
 
-const checkAlreadySubmittedToday = async (userId, dateObj) => {
+const getExpensesForDate = async (userId, dateObj) => {
   const start = new Date(dateObj);
   start.setHours(0, 0, 0, 0);
 
   const end = new Date(dateObj);
   end.setHours(23, 59, 59, 999);
 
-  return await NormalExpense.findOne({
+  return await NormalExpense.find({
     user: userId,
     date: { $gte: start, $lte: end },
   });
 };
-
 
 exports.recordFWLocation = async (req, res) => {
   try {
@@ -604,9 +952,12 @@ exports.recordFWLocation = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("FW record location error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
+  console.error("FW record location error:", err);
+  res.status(500).json({ 
+    message: "Server error",
+    error: err.message
+  });
+}
 };
 
 
@@ -663,12 +1014,28 @@ exports.createFWExpense = async (req, res) => {
 
     const today = new Date();
 
-    const existing = await checkAlreadySubmittedToday(userId, today);
-    if (existing) {
-      return res.status(400).json({
-        message: "You have already submitted an entry for today",
-      });
-    }
+    // const existing = await checkAlreadySubmittedToday(userId, today);
+    // if (existing) {
+    //   return res.status(400).json({
+    //     message: "You have already submitted an entry for today",
+    //   });
+    // }
+
+    const todayExpenses = await getExpensesForDate(userId, today);
+
+// ❌ If NW already exists → block
+if (todayExpenses.some(e => e.workType === "NW")) {
+  return res.status(400).json({
+    message: "Cannot add FW. NW already marked for this date.",
+  });
+}
+
+// ❌ If FW already exists → block
+if (todayExpenses.some(e => e.workType === "FW")) {
+  return res.status(400).json({
+    message: "FW already submitted for this date.",
+  });
+}
 
     const calc = await calculateFWExpense(userId, placeOfWork, MOT);
 
@@ -690,14 +1057,23 @@ exports.createFWExpense = async (req, res) => {
       total: calc.total,
     });
 
-    
-
-   await Approval.updateOne(
+    const lastUpdate = await Approval.updateOne(
   { user: userId, month: currentMonth },
   {
     $set: { lastReported: formatDate() },
   }
 );
+
+console.log("LastReported update result:", lastUpdate);
+
+    
+
+//    await Approval.updateOne(
+//   { user: userId, month: currentMonth },
+//   {
+//     $set: { lastReported: formatDate() },
+//   }
+// );
 
 
     res.status(201).json({
@@ -705,10 +1081,16 @@ exports.createFWExpense = async (req, res) => {
       expense,
       displayDate: formatDate(today),
     });
-
     const expenseMonth = getMonthFromDate(today);
 
+console.log("FW Created for user:", userId);
+console.log("Expense Month:", expenseMonth);
+
 await recalculateNormalExpTotal(userId, expenseMonth);
+await recalculateTRDays(userId, expenseMonth);
+//     const expenseMonth = getMonthFromDate(today);
+
+// await recalculateNormalExpTotal(userId, expenseMonth);
 
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -743,12 +1125,28 @@ exports.createNFWExpense = async (req, res) => {
 
     const today = new Date();
 
-    const existing = await checkAlreadySubmittedToday(userId, today);
-    if (existing) {
-      return res.status(400).json({
-        message: "You have already submitted an entry for today",
-      });
-    }
+    // const existing = await checkAlreadySubmittedToday(userId, today);
+    // if (existing) {
+    //   return res.status(400).json({
+    //     message: "You have already submitted an entry for today",
+    //   });
+    // }
+
+    const todayExpenses = await getExpensesForDate(userId, today);
+
+// ❌ If NW already exists → block
+if (todayExpenses.some(e => e.workType === "NW")) {
+  return res.status(400).json({
+    message: "Cannot add NFW. NW already marked for this date.",
+  });
+}
+
+// ❌ If NFW already exists → block
+if (todayExpenses.some(e => e.workType === "NFW")) {
+  return res.status(400).json({
+    message: "NFW already submitted for this date.",
+  });
+}
 
     const total = Number(TA) + Number(DA);
 
@@ -770,8 +1168,10 @@ exports.createNFWExpense = async (req, res) => {
       total,
     });
 
-   await recalculateNormalExpTotal(userId, currentMonth);
+const expenseMonth = getMonthFromDate(today);
 
+await recalculateNormalExpTotal(userId, expenseMonth);
+await recalculateTRDays(userId, expenseMonth);
 await Approval.updateOne(
   { user: userId, month: currentMonth },
   { $set: { lastReported: formatDate() } }
@@ -809,6 +1209,46 @@ exports.createNWExpense = async (req, res) => {
       });
     }
 
+    // Normalize both dates
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+parsedDate.setHours(0, 0, 0, 0);
+
+// ❌ Block future dates
+if (parsedDate > today) {
+  return res.status(400).json({
+    message: "Future dates are not allowed",
+  });
+}
+
+// ✅ Allow only current or previous month
+const currentMonthIndex = today.getMonth();
+const currentYear = today.getFullYear();
+
+const expenseMonthIndex = parsedDate.getMonth();
+const expenseYear = parsedDate.getFullYear();
+
+const isCurrentMonth =
+  expenseMonthIndex === currentMonthIndex &&
+  expenseYear === currentYear;
+
+const isPreviousMonth =
+  (
+    expenseYear === currentYear &&
+    expenseMonthIndex === currentMonthIndex - 1
+  ) ||
+  (
+    currentMonthIndex === 0 && // January case
+    expenseMonthIndex === 11 &&
+    expenseYear === currentYear - 1
+  );
+
+if (!isCurrentMonth && !isPreviousMonth) {
+  return res.status(400).json({
+    message: "You can only submit for current or previous month",
+  });
+}
+
     await ensureMonthlyApprovals();
 
     // ✅ Get month from selected date (NOT current month)
@@ -825,12 +1265,21 @@ exports.createNWExpense = async (req, res) => {
       });
     }
 
-    const existing = await checkAlreadySubmittedToday(userId, parsedDate);
-    if (existing) {
-      return res.status(400).json({
-        message: "You have already submitted an entry for this date",
-      });
-    }
+    // const existing = await checkAlreadySubmittedToday(userId, parsedDate);
+    // if (existing) {
+    //   return res.status(400).json({
+    //     message: "You have already submitted an entry for this date",
+    //   });
+    // }
+
+    const todayExpenses = await getExpensesForDate(userId, parsedDate);
+
+// ❌ If ANY expense exists → block
+if (todayExpenses.length > 0) {
+  return res.status(400).json({
+    message: "Cannot mark NW. Expense already exists for this date.",
+  });
+}
 
     const expense = await NormalExpense.create({
       user: userId,
@@ -853,7 +1302,7 @@ exports.createNWExpense = async (req, res) => {
     // ✅ Increment NWdays
     await recalculateNWDays(userId, expenseMonth);
     await recalculateNormalExpTotal(userId, expenseMonth);
-
+await recalculateTRDays(userId, expenseMonth);
 await Approval.updateOne(
   { user: userId, month: expenseMonth },
   {
@@ -970,12 +1419,51 @@ exports.createOtherExpense = async (req, res) => {
       });
     }
 
-    await ensureMonthlyApprovals();
-    const currentMonth = getCurrentMonth();
+    // Normalize both dates
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+parsedDate.setHours(0, 0, 0, 0);
 
+// ❌ Block future dates
+if (parsedDate > today) {
+  return res.status(400).json({
+    message: "Future dates are not allowed",
+  });
+}
+
+// ✅ Allow only current or previous month
+const currentMonthIndex = today.getMonth();
+const currentYear = today.getFullYear();
+
+const expenseMonthIndex = parsedDate.getMonth();
+const expenseYear = parsedDate.getFullYear();
+
+const isCurrentMonth =
+  expenseMonthIndex === currentMonthIndex &&
+  expenseYear === currentYear;
+
+const isPreviousMonth =
+  (
+    expenseYear === currentYear &&
+    expenseMonthIndex === currentMonthIndex - 1
+  ) ||
+  (
+    currentMonthIndex === 0 && // January case
+    expenseMonthIndex === 11 &&
+    expenseYear === currentYear - 1
+  );
+
+if (!isCurrentMonth && !isPreviousMonth) {
+  return res.status(400).json({
+    message: "You can only submit for current or previous month",
+  });
+}
+
+    await ensureMonthlyApprovals();
+const expenseMonth = getMonthFromDate(parsedDate);
     const approval = await Approval.findOne({
       user: userId,
-      month: currentMonth,
+      month: expenseMonth,
     });
 
     if (approval?.approvedByUser) {
@@ -1005,20 +1493,13 @@ exports.createOtherExpense = async (req, res) => {
       total,
     });
 
-    const expenseMonth = getMonthFromDate(parsedDate);
     await recalculateOtherExpTotal(userId, expenseMonth);
-
+await recalculateTRDays(userId, expenseMonth);
 await Approval.updateOne(
   { user: userId, month: expenseMonth },
   { $set: { lastReported: formatDate() } }
 );
 
-await Approval.updateOne(
-  { user: userId, month: expenseMonth },
-  {
-    $set: { lastReported: formatDate() },
-  }
-);
 
 
     res.status(201).json({

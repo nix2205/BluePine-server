@@ -388,6 +388,9 @@ exports.ensureMonthlyApprovals = async () => {
           lastReported: null,
           approvedByUser: false,
           approvedBySuperior: false,
+          TR: 0,
+normalExpTotal: 0,
+otherExpTotal: 0,
         }
       },
       { upsert: true }

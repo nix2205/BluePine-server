@@ -6,6 +6,7 @@ const {
   getMappedCities,
   deleteMapping,
   resolveUserCityFromCoords,
+  getUserMappings, // 👈 ADD THIS
 } = require("../controllers/cityMapController");
 
 // ✅ Proper destructuring from middleware export
@@ -17,6 +18,13 @@ router.post(
   "/record",
   protect,
   recordLocation
+);
+
+// 🔹 3️⃣ Get mappings of specific user (admin / manager)
+router.get(
+  "/user/:userId",
+  protect,
+  getUserMappings
 );
 
 
@@ -31,8 +39,7 @@ router.get(
 // 🔹 3️⃣ Delete mapping (admin-only recommended)
 router.delete(
   "/:id",
-  protect,
-  adminOnly, // remove this line if you don’t want restriction
+  protect, // remove this line if you don’t want restriction
   deleteMapping
 );
 

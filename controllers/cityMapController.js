@@ -351,19 +351,52 @@ exports.getMappedCities = async (req, res) => {
 // ===============================
 // DELETE MAPPING
 // ===============================
+// ===============================
+// DELETE MAPPING (ROLE SAFE)
+// ===============================
 exports.deleteMapping = async (req, res) => {
   try {
     const { id } = req.params;
+    const requester = req.user;
 
-    await CityMap.findByIdAndDelete(id);
+    const mapping = await CityMap.findById(id);
+
+    if (!mapping) {
+      return res.status(404).json({ message: "Mapping not found" });
+    }
+
+    // 🔐 Executive can delete only their own
+    if (requester.role === "executive") {
+      if (mapping.user.toString() !== requester._id.toString()) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+    }
+
+    // 🔐 Manager can delete only subordinates'
+    if (requester.role === "manager") {
+      const subordinate = await User.findOne({
+        _id: mapping.user,
+        superior: requester._id,
+      });
+
+      if (!subordinate) {
+        return res.status(403).json({
+          message: "You can only delete mappings of your subordinates",
+        });
+      }
+    }
+
+    // 🔐 Admin can delete anything
+
+    await mapping.deleteOne();
 
     res.json({ message: "Mapping deleted successfully" });
 
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // ===============================
 // RESOLVE USER CITY FROM COORDS
@@ -416,3 +449,44 @@ exports.resolveUserCityFromCoords = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+// ===============================
+// ADMIN/MANAGER - GET SPECIFIC USER MAPPINGS
+// ===============================
+exports.getUserMappings = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const requester = req.user;
+
+    // 🔐 Only admin or manager allowed
+    if (!["admin", "manager"].includes(requester.role)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // 🔒 If manager, ensure this user is their subordinate
+    if (requester.role === "manager") {
+      const subordinate = await User.findOne({
+        _id: userId,
+        superior: requester._id,
+      });
+
+      if (!subordinate) {
+        return res.status(403).json({
+          message: "You can only view mappings of your subordinates",
+        });
+      }
+    }
+
+    const mappings = await CityMap.find({ user: userId })
+      .sort({ date: -1 });
+
+    res.json(mappings);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+

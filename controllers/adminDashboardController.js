@@ -411,6 +411,9 @@ const users = await User.find(userQuery)
       const currentNWdays = currentApproval?.NWdays || 0;
       const prevNWdays = prevApproval?.NWdays || 0;
 
+      const currentTRdays = currentApproval?.TR || 0;
+const prevTRdays = prevApproval?.TR || 0;
+
       dashboardData.push({
         _id: user._id,
         userId: user.userId,
@@ -426,6 +429,7 @@ const users = await User.find(userQuery)
           approvedBySuperior:
             currentApproval?.approvedBySuperior || false,
           NWdays: currentNWdays,
+          TRdays: currentTRdays,
         },
 
         prevMonth: {
@@ -436,6 +440,7 @@ const users = await User.find(userQuery)
           approvedBySuperior:
             prevApproval?.approvedBySuperior || false,
           NWdays: prevNWdays,
+          TRdays: prevTRdays,
         },
 
         NWdays: currentNWdays,

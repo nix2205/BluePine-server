@@ -182,6 +182,12 @@ const approvalSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // Total Reporting days in that month
+TR: {
+  type: Number,
+  default: 0,
+},
+
     // Store as dd/mm/yy
     lastReported: {
       type: String,
