@@ -21,7 +21,7 @@ const approvalRoutes = require("./routes/approvalRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const adminDashboardRoutes = require("./routes/adminDashboardRoutes");
 const announcementRoutes = require("./routes/announcementRoutes");
-
+const doctorRoutes = require("./routes/doctorRoutes");
 
 
 const app = express();
@@ -64,6 +64,7 @@ app.use("/api/approvals", approvalRoutes);
 app.use("/api/expense", expenseRoutes);
 app.use("/api/admin-dashboard", adminDashboardRoutes);
 app.use("/api/announcement", announcementRoutes);
+app.use("/api/doctors", doctorRoutes);
 
 
 app.get("/", (req, res) => {

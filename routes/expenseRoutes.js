@@ -7,6 +7,7 @@ const {
   updateOtherExpense,
   deleteNormalExpense,
   deleteOtherExpense,
+  addOtherExpenseBySuperior
 } = require("../controllers/expenseController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -19,6 +20,10 @@ router.put("/normal/:id", protect, updateNormalExpense);
 router.put("/other/:id", protect, updateOtherExpense);
 router.delete("/normal/:id", protect, deleteNormalExpense);
 router.delete("/other/:id", protect, deleteOtherExpense);
+router.post(
+  "/add-other-expense-superior",
+  protect,addOtherExpenseBySuperior
+);
 
 
 module.exports = router;

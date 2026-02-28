@@ -580,3 +580,102 @@ await recalculateTRDays(expense.user, monthString);   // ✅ ADD THIS
     res.status(500).json({ message: err.message });
   }
 };
+
+
+
+/*
+========================================
+ADD OTHER EXPENSE (ADMIN / MANAGER)
+Can add even after approval
+Nothing mandatory
+Date auto defaults to today
+========================================
+*/
+
+exports.addOtherExpenseBySuperior = async (req, res) => {
+  try {
+    const requester = req.user;
+    const {
+      userId,
+      date,
+      amount,
+      extraAmount,
+      description,
+      billNo,
+      extraDescription,
+      category,
+    } = req.body;
+
+    // 🔐 ROLE CHECK
+    if (requester.role !== "admin" && requester.role !== "manager") {
+      return res.status(403).json({
+        message: "Not authorized to add other expense",
+      });
+    }
+
+    // MANAGER → only subordinates
+    if (requester.role === "manager") {
+      const subordinate = await User.findOne({
+        _id: userId,
+        superior: requester._id,
+      });
+
+      if (!subordinate) {
+        return res.status(403).json({
+          message: "Not authorized to add expense for this user",
+        });
+      }
+    }
+
+    // 📅 AUTO DATE (if not provided)
+    const expenseDate = date ? new Date(date) : new Date();
+
+    // 🧠 Create dynamically (nothing mandatory)
+    const newExpense = new OtherExpense({
+      user: userId,
+      date: expenseDate,
+    });
+
+    if (amount !== undefined)
+      newExpense.amount = Number(amount);
+
+    if (extraAmount !== undefined)
+      newExpense.extraAmount = Number(extraAmount);
+
+    if (description !== undefined)
+      newExpense.description = description;
+    
+    if (billNo !== undefined)
+      newExpense.billNo = billNo;
+
+    if (extraDescription !== undefined)
+      newExpense.extraDescription = extraDescription;
+
+    if (category !== undefined)
+      newExpense.category = category;
+
+    // 🔥 Calculate total safely
+    newExpense.total =
+      Number(newExpense.amount || 0) +
+      Number(newExpense.extraAmount || 0);
+
+    await newExpense.save();
+
+    // 📊 RECALCULATE MONTHLY TOTALS
+    const monthString = getMonthFromDate(expenseDate);
+
+    await recalculateOtherExpTotal(userId, monthString);
+    await recalculateTRDays(userId, monthString);
+
+    res.status(201).json({
+      message: "Other expense added successfully",
+      expense: newExpense,
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Server error while adding other expense",
+    });
+  }
+};
