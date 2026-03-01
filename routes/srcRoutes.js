@@ -62,6 +62,7 @@ const {
   updateDAperStation,
   updateRsPerKm,
   getUserHQ,
+  applyConfigToSRCs
 } = require("../controllers/srcController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -93,6 +94,8 @@ router.get("/hq/:userId", protect, managerOrAdmin, getUserHQ);
 router.post("/", protect, managerOrAdmin, createSRC);
 router.put("/:id", protect, managerOrAdmin, updateSRC);
 router.delete("/:id", protect, managerOrAdmin, deleteSRC);
+router.put("/apply/:userid", protect, managerOrAdmin, applyConfigToSRCs);
+
 
 module.exports = router;
 

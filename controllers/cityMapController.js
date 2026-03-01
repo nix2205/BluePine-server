@@ -199,16 +199,133 @@ const haversineDistance = require("../utils/haversineDistance");
 // ===============================
 // POST /api/mapping/record
 // ===============================
+// exports.recordLocation = async (req, res) => {
+//   try {
+//     const { lat, lon, selectedCity } = req.body;
+//     const userId = req.user._id;
+
+//     if (!lat || !lon || !selectedCity) {
+//       return res.status(400).json({ message: "Missing required fields" });
+//     }
+
+//     // 1️⃣ Check city exists in user's SRC
+//     const srcEntry = await SRC.findOne({
+//       user: userId,
+//       placeOfWork: selectedCity,
+//     });
+
+//     if (!srcEntry) {
+//       return res.status(400).json({
+//         message: "Selected city not found in your SRC list",
+//       });
+//     }
+
+//     // 2️⃣ Prevent duplicate for this user
+//     const existing = await CityMap.findOne({
+//       user: userId,
+//       city: selectedCity,
+//     });
+
+//     if (existing) {
+//       return res.status(400).json({
+//         message: "City already mapped",
+//       });
+//     }
+
+//     // 3️⃣ Reverse Geocode
+//     const response = await axios.get(
+//       `https://api.opencagedata.com/geocode/v1/json`,
+//       {
+//         params: {
+//           key: process.env.OPENCAGE_API_KEY,
+//           q: `${lat},${lon}`,
+//         },
+//       }
+//     );
+
+//     const address =
+//       response.data.results[0]?.formatted || "Address not found";
+
+//     // 4️⃣ Create mapping for current user
+//     const newMapping = await CityMap.create({
+//       user: userId,
+//       city: selectedCity,
+//       location: { lat, lon },
+//       radiusKm: srcEntry.radius,
+//       stationType: srcEntry.station,
+//       address,
+//       date: new Date(),
+//       time: new Date().toLocaleTimeString(),
+//     });
+
+//     // ==================================================
+//     // 🔥 5️⃣ PROPAGATE TO SUPERIORS RECURSIVELY
+//     // ==================================================
+
+//     let currentUser = await User.findById(userId);
+
+//     while (currentUser.superior) {
+//       const superior = await User.findById(currentUser.superior);
+
+//       if (!superior) break;
+
+//       // Check if superior has this city in SRC
+//       const superiorSRC = await SRC.findOne({
+//         user: superior._id,
+//         placeOfWork: selectedCity,
+//       });
+
+//       if (superiorSRC) {
+//         // Check duplicate mapping for superior
+//         const superiorExisting = await CityMap.findOne({
+//           user: superior._id,
+//           city: selectedCity,
+//         });
+
+//         if (!superiorExisting) {
+//           await CityMap.create({
+//             user: superior._id,
+//             city: selectedCity,
+//             location: { lat, lon },
+//             radiusKm: superiorSRC.radius, // radius same as their SRC
+//             stationType: superiorSRC.station, // station from THEIR SRC
+//             address,
+//             date: new Date(),
+//             time: new Date().toLocaleTimeString(),
+//           });
+//         }
+//       }
+
+//       // Move up the chain
+//       currentUser = superior;
+//     }
+
+//     res.status(201).json({
+//       message: "Location recorded successfully",
+//       data: newMapping,
+//     });
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
 exports.recordLocation = async (req, res) => {
   try {
     const { lat, lon, selectedCity } = req.body;
     const userId = req.user._id;
 
     if (!lat || !lon || !selectedCity) {
-      return res.status(400).json({ message: "Missing required fields" });
+      return res.status(400).json({
+        message: "Missing required fields",
+      });
     }
 
-    // 1️⃣ Check city exists in user's SRC
+    /* ==============================
+       1️⃣ Ensure City Exists In User SRC
+    ============================== */
     const srcEntry = await SRC.findOne({
       user: userId,
       placeOfWork: selectedCity,
@@ -220,9 +337,12 @@ exports.recordLocation = async (req, res) => {
       });
     }
 
-    // 2️⃣ Prevent duplicate for this user
+    /* ==============================
+       2️⃣ Prevent Duplicate For Base User
+    ============================== */
     const existing = await CityMap.findOne({
       user: userId,
+      originUser: userId,
       city: selectedCity,
     });
 
@@ -232,9 +352,11 @@ exports.recordLocation = async (req, res) => {
       });
     }
 
-    // 3️⃣ Reverse Geocode
+    /* ==============================
+       3️⃣ Reverse Geocode
+    ============================== */
     const response = await axios.get(
-      `https://api.opencagedata.com/geocode/v1/json`,
+      "https://api.opencagedata.com/geocode/v1/json",
       {
         params: {
           key: process.env.OPENCAGE_API_KEY,
@@ -246,9 +368,12 @@ exports.recordLocation = async (req, res) => {
     const address =
       response.data.results[0]?.formatted || "Address not found";
 
-    // 4️⃣ Create mapping for current user
+    /* ==============================
+       4️⃣ Create Mapping For Base User
+    ============================== */
     const newMapping = await CityMap.create({
       user: userId,
+      originUser: userId,  // 🔥 lineage tracking
       city: selectedCity,
       location: { lat, lon },
       radiusKm: srcEntry.radius,
@@ -258,37 +383,46 @@ exports.recordLocation = async (req, res) => {
       time: new Date().toLocaleTimeString(),
     });
 
-    // ==================================================
-    // 🔥 5️⃣ PROPAGATE TO SUPERIORS RECURSIVELY
-    // ==================================================
+    /* ==============================
+       5️⃣ Propagate To Superiors
+    ============================== */
+    let currentUser = await User.findById(userId).select("superior");
+    const visited = new Set(); // prevent infinite loops
 
-    let currentUser = await User.findById(userId);
+    while (currentUser?.superior) {
 
-    while (currentUser.superior) {
-      const superior = await User.findById(currentUser.superior);
+      const superiorId = currentUser.superior.toString();
+
+      if (visited.has(superiorId)) break;
+      visited.add(superiorId);
+
+      const superior = await User.findById(superiorId).select("superior");
 
       if (!superior) break;
 
-      // Check if superior has this city in SRC
+      // Check if superior has this city in THEIR SRC
       const superiorSRC = await SRC.findOne({
-        user: superior._id,
+        user: superiorId,
         placeOfWork: selectedCity,
       });
 
       if (superiorSRC) {
-        // Check duplicate mapping for superior
+
+        // Prevent duplicate for this origin
         const superiorExisting = await CityMap.findOne({
-          user: superior._id,
+          user: superiorId,
+          originUser: userId,
           city: selectedCity,
         });
 
         if (!superiorExisting) {
           await CityMap.create({
-            user: superior._id,
+            user: superiorId,
+            originUser: userId,   // 🔥 original subordinate
             city: selectedCity,
             location: { lat, lon },
-            radiusKm: superiorSRC.radius, // radius same as their SRC
-            stationType: superiorSRC.station, // station from THEIR SRC
+            radiusKm: superiorSRC.radius,     // superior-specific radius
+            stationType: superiorSRC.station, // superior-specific station
             address,
             date: new Date(),
             time: new Date().toLocaleTimeString(),
@@ -296,18 +430,22 @@ exports.recordLocation = async (req, res) => {
         }
       }
 
-      // Move up the chain
       currentUser = superior;
     }
 
+    /* ==============================
+       RESPONSE
+    ============================== */
     res.status(201).json({
       message: "Location recorded successfully",
       data: newMapping,
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Record Location Error:", error);
+    res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 

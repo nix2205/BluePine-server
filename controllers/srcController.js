@@ -1,3 +1,685 @@
+// const SRC = require("../models/SRC");
+// const SRCConfig = require("../models/SRCConfig");
+// const User = require("../models/User");
+
+// /* =========================
+//    GET USER HQ
+// ========================= */
+// exports.getUserHQ = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+
+//     const hq = await SRC.findOne({
+//       user: userId,
+//       station: "HQ",
+//     });
+
+//     if (!hq) {
+//       return res.json({ placeOfWork: "-" });
+//     }
+
+//     res.json({
+//       placeOfWork: hq.placeOfWork,
+//     });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+// /* =========================
+//    GET USER SRCS
+// ========================= */
+// exports.getUserSRCs = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+
+//     const srcs = await SRC.find({ user: userId })
+//       .sort({ station: 1, placeOfWork: 1 });
+
+//     res.json(srcs);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+
+// exports.createSRC = async (req, res) => {
+//   try {
+//     const {
+//       user,
+//       placeOfWork,
+//       station,
+//       radius,
+//       kms,
+//       MOT,
+//       RsPerKm,
+//       DA,
+//     } = req.body;
+
+//     if (!user || !placeOfWork || !station || radius == null || kms == null || !MOT) {
+//       return res.status(400).json({
+//         message: "All required fields must be provided",
+//       });
+//     }
+
+//     const normalizedPlace = placeOfWork.trim();
+
+//     const userConfig = await SRCConfig.findOne({ user });
+
+//     if (!userConfig) {
+//       return res.status(400).json({
+//         message: "SRC configuration not set for this user",
+//       });
+//     }
+
+//     // 🔹 Create for original user
+//     const baseSRC = await createSRCForUser(
+//       user,                 // userId (owner)
+//       user,                 // originUser (important 🔥)
+//       normalizedPlace,
+//       station,
+//       radius,
+//       kms,
+//       MOT,
+//       RsPerKm,
+//       DA,
+//       userConfig,
+//       false
+//     );
+
+//     // 🔥 Propagate upward
+//     let currentUser = await User.findById(user).select("superior");
+//     const visited = new Set();
+
+//     while (currentUser && currentUser.superior) {
+
+//       const superiorId = currentUser.superior.toString();
+
+//       if (visited.has(superiorId)) break;
+//       visited.add(superiorId);
+
+//       const superiorConfig =
+//         (await SRCConfig.findOne({ user: superiorId })) ||
+//         userConfig;
+
+//       await createSRCForUser(
+//         superiorId,          // owner becomes superior
+//         user,                // 🔥 origin still original user
+//         normalizedPlace,
+//         station,
+//         radius,
+//         kms,
+//         MOT,
+//         undefined,
+//         undefined,
+//         superiorConfig,
+//         true
+//       );
+
+//       currentUser = await User.findById(superiorId).select("superior");
+//     }
+
+//     res.status(201).json(baseSRC);
+
+//   } catch (err) {
+//     console.error("CREATE SRC ERROR:", err);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+
+// // async function createSRCForUser(
+// //   userId,          // who owns this SRC
+// //   originUserId,    // who originally created it 🔥
+// //   placeOfWork,
+// //   station,
+// //   radius,
+// //   kms,
+// //   MOT,
+// //   RsPerKm,
+// //   DA,
+// //   config,
+// //   allowDuplicate = false
+// // ) {
+
+// //   const normalizedPlace = placeOfWork.trim();
+// //   const finalMOT = station === "HQ" ? "Local" : MOT;
+
+// //   // Strict duplicate check only for base user
+// //   if (!allowDuplicate) {
+// //     const duplicate = await SRC.findOne({
+// //       user: userId,
+// //       originUser: originUserId,
+// //       placeOfWork: normalizedPlace,
+// //       station,
+// //       MOT: finalMOT,
+// //     });
+
+// //     if (duplicate) return duplicate;
+// //   }
+
+// //   const newSRC = new SRC({
+// //     user: userId,
+// //     originUser: originUserId,   // 🔥 CRITICAL
+// //     placeOfWork: normalizedPlace,
+// //     station,
+// //     radius: Number(radius) || 0,
+// //     kms: station === "HQ" ? 0 : Number(kms) || 0,
+// //     MOT: finalMOT,
+// //     RsPerKmOverride: station === "HQ" ? 0 : (RsPerKm ?? null),
+// //     DAOverride: DA ?? null,
+// //   });
+
+// //   await newSRC.save();
+
+// //   return newSRC;
+// // }
+
+
+// // async function createSRCForUser(
+// //   userId,          // who owns this SRC
+// //   originUserId,    // who originally created it
+// //   placeOfWork,
+// //   station,
+// //   radius,
+// //   kms,
+// //   MOT,
+// //   RsPerKm,
+// //   DA,
+// //   config,
+// //   allowDuplicate = false
+// // ) {
+
+// //   const normalizedPlace = placeOfWork.trim();
+// //   const finalMOT = station === "HQ" ? "Local" : MOT;
+
+// //   // Strict duplicate check only for base user
+// //   if (!allowDuplicate) {
+// //     const duplicate = await SRC.findOne({
+// //       user: userId,
+// //       originUser: originUserId,
+// //       placeOfWork: normalizedPlace,
+// //       station,
+// //       MOT: finalMOT,
+// //     });
+
+// //     if (duplicate) return duplicate;
+// //   }
+
+// //   /* ===============================
+// //      BASE USER (Executive)
+// //   =============================== */
+// //   if (!allowDuplicate) {
+
+// //     const newSRC = new SRC({
+// //       user: userId,
+// //       originUser: originUserId,
+// //       placeOfWork: normalizedPlace,
+// //       station,
+// //       radius: Number(radius) || 0,
+// //       kms: station === "HQ" ? 0 : Number(kms) || 0,
+// //       MOT: finalMOT,
+// //       RsPerKmOverride: station === "HQ" ? 0 : (RsPerKm ?? null),
+// //       TAOverride: null,                  // 🔥 keep untouched
+// //       DAOverride: DA ?? null,
+// //     });
+
+// //     await newSRC.save();
+// //     return newSRC;
+// //   }
+
+// //   /* ===============================
+// //      SUPERIOR (Manager / Admin)
+// //      ALWAYS initialize overrides as 0
+// //   =============================== */
+
+// //   const newSRC = new SRC({
+// //     user: userId,                 // superior
+// //     originUser: originUserId,     // subordinate is source
+// //     placeOfWork: normalizedPlace,
+// //     station,
+// //     radius: Number(radius) || 0,
+// //     kms: station === "HQ" ? 0 : Number(kms) || 0,
+// //     MOT: finalMOT,
+
+// //     RsPerKmOverride: 0,           // 🔥 always start as 0
+// //     TAOverride: 0,                // 🔥 always start as 0
+// //     DAOverride: 0,                // 🔥 always start as 0
+// //   });
+
+// //   await newSRC.save();
+// //   return newSRC;
+// // }
+
+
+// // /* =========================
+// //    UPDATE SRC
+// // ========================= */
+// // exports.updateSRC = async (req, res) => {
+// //   try {
+// //     const { id } = req.params;
+// //     const { RsPerKm, DA, ...updates } = req.body;
+
+// //     const src = await SRC.findById(id);
+
+// //     if (!src) {
+// //       return res.status(404).json({ message: "SRC not found" });
+// //     }
+
+// //     /* 🔒 HQ IMMUTABLE RULES */
+// //     if (src.station === "HQ") {
+// //       updates.MOT = "Local";
+// //       updates.kms = 0;
+// //       src.RsPerKmOverride = null;
+// //       src.DAOverride = null;
+// //     }
+
+// //     if (RsPerKm !== undefined) {
+// //       src.RsPerKmOverride = RsPerKm;
+// //     }
+
+// //     if (DA !== undefined) {
+// //       src.DAOverride = DA;
+// //     }
+
+// //     Object.assign(src, updates);
+
+// //     await src.save();
+
+// //     res.json(src);
+
+// //   } catch (err) {
+// //     res.status(500).json({ message: err.message });
+// //   }
+// // };
+
+
+// async function createSRCForUser(
+//   userId,
+//   originUserId,
+//   placeOfWork,
+//   station,
+//   radius,
+//   kms,
+//   MOT,
+//   RsPerKm,
+//   DA,
+//   config,
+//   allowDuplicate = false
+// ) {
+
+//   const normalizedPlace = placeOfWork.trim();
+
+//   /* ===============================
+//      BASE USER (EXECUTIVE)
+//   =============================== */
+//   if (!allowDuplicate) {
+
+//     const duplicate = await SRC.findOne({
+//       user: userId,
+//       originUser: originUserId,
+//       placeOfWork: normalizedPlace,
+//       station,
+//     });
+
+//     if (duplicate) return duplicate;
+
+//     const newSRC = new SRC({
+//       user: userId,
+//       originUser: originUserId,
+//       placeOfWork: normalizedPlace,
+//       station,
+//       radius: Number(radius) || 0,
+//       kms: station === "HQ" ? 0 : Number(kms) || 0,
+//       MOT: station === "HQ" ? "Local" : MOT,
+//       RsPerKmOverride: station === "HQ" ? 0 : (RsPerKm ?? null),
+//       TAOverride: null,
+//       DAOverride: DA ?? null,
+//       isManuallyEdited: false,
+//     });
+
+//     await newSRC.save();
+//     return newSRC;
+//   }
+
+//   /* ===============================
+//      SUPERIOR PROPAGATION
+//   =============================== */
+
+//   // Skip duplicate placeOfWork
+//   const existing = await SRC.findOne({
+//     user: userId,
+//     placeOfWork: normalizedPlace,
+//   });
+
+//   if (existing) return existing;
+
+//   // Check if superior has any config override
+//   const hasOverride =
+//     config?.defaultRsPerKm != null ||
+//     config?.defaultDA != null ||
+//     config?.defaultTA != null;
+
+//   const newSRC = new SRC({
+//     user: userId,
+//     originUser: originUserId,
+//     placeOfWork: normalizedPlace,
+//     station: "-",              // 🔥 leave editable later
+//     radius: Number(radius) || 0,
+//     kms: null,                 // 🔥 empty
+//     MOT: null,                 // 🔥 empty
+//     RsPerKmOverride: hasOverride ? null : 0,
+//     TAOverride: hasOverride ? null : 0,
+//     DAOverride: hasOverride ? null : 0,
+//     isManuallyEdited: false,
+//   });
+
+//   await newSRC.save();
+//   return newSRC;
+// }
+
+
+// exports.updateSRC = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const updates = { ...req.body };
+
+//     const src = await SRC.findById(id);
+//     if (!src) {
+//       return res.status(404).json({ message: "SRC not found" });
+//     }
+
+//         // Normalize placeOfWork
+//     if (updates.placeOfWork) {
+//       updates.placeOfWork = updates.placeOfWork.trim();
+//     }
+
+//     const duplicate = await SRC.findOne({
+//   user: src.user,
+//   _id: { $ne: src._id },
+//   placeOfWork: updates.placeOfWork,
+// });
+
+// if (duplicate) {
+//   return res.status(400).json({
+//     message: "Place of work already exists",
+//   });
+// }
+
+//     // HQ rules
+//     if (src.station === "HQ") {
+//       updates.MOT = "Local";
+//       updates.kms = 0;
+//     }
+
+//     Object.assign(src, updates);
+
+//     // 🔥 Mark as manually edited
+//     src.isManuallyEdited = true;
+
+//     await src.save();
+
+//     res.json(src);
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+// exports.applyConfigToSRCs = async (userId) => {
+
+//   const config = await SRCConfig.findOne({ user: userId });
+//   if (!config) return;
+
+//   const srcs = await SRC.find({ user: userId });
+
+//   for (let src of srcs) {
+
+//     // 🔥 Skip manually edited ones
+//     if (src.isManuallyEdited) continue;
+
+//     src.RsPerKmOverride = config.defaultRsPerKm ?? 0;
+//     src.DAOverride = config.defaultDA ?? 0;
+//     src.TAOverride = config.defaultTA ?? 0;
+
+
+    
+
+//     await src.save();
+//   }
+// };
+// // exports.updateSRC = async (req, res) => {
+// //   try {
+// //     const { id } = req.params;
+// //     const { RsPerKm, DA, TA, ...updates } = req.body;
+
+// //     const src = await SRC.findById(id);
+
+// //     if (!src) {
+// //       return res.status(404).json({ message: "SRC not found" });
+// //     }
+
+// //     /* 🔒 HQ IMMUTABLE RULES */
+// //     if (src.station === "HQ") {
+// //       updates.MOT = "Local";
+// //       updates.kms = 0;
+// //       src.RsPerKmOverride = null;
+// //       src.DAOverride = null;
+// //       src.TAOverride = null;
+// //     }
+
+// //     if (RsPerKm !== undefined) {
+// //       src.RsPerKmOverride = RsPerKm;
+// //     }
+
+// //     if (DA !== undefined) {
+// //       src.DAOverride = DA;
+// //     }
+
+// //     if (TA !== undefined) {
+// //       src.TAOverride = TA;
+// //     }
+
+// //     Object.assign(src, updates);
+
+// //     await src.save();
+
+// //     res.json(src);
+
+// //   } catch (err) {
+// //     res.status(500).json({ message: err.message });
+// //   }
+// // };
+
+
+// /* =========================
+//    DELETE SRC (HARD DELETE)
+// ========================= */
+// exports.deleteSRC = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const deleted = await SRC.findByIdAndDelete(id);
+
+//     if (!deleted) {
+//       return res.status(404).json({ message: "SRC not found" });
+//     }
+
+//     res.json({ message: "SRC permanently deleted" });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+// /* =========================
+//    GET MY SRC (EXECUTIVE)
+// ========================= */
+// exports.getMySRCs = async (req, res) => {
+//   try {
+//     const srcs = await SRC.find({ user: req.user._id })
+//       .sort({ station: 1, placeOfWork: 1 });
+
+//     res.json(srcs);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+
+
+
+
+
+
+
+
+
+
+
+// // exports.createSRC = async (req, res) => {
+// //   try {
+// //     const {
+// //       user,
+// //       placeOfWork,
+// //       station,
+// //       radius,
+// //       kms,
+// //       MOT,
+// //       RsPerKm,
+// //       DA,
+// //     } = req.body;
+
+// //     if (!user || !placeOfWork || !station || radius == null || kms == null || !MOT) {
+// //       return res.status(400).json({
+// //         message: "All required fields must be provided",
+// //       });
+// //     }
+
+// //     const normalizedPlace = placeOfWork.trim();
+
+// //     const userConfig = await SRCConfig.findOne({ user });
+
+// //     if (!userConfig) {
+// //       return res.status(400).json({
+// //         message: "SRC configuration not set for this user",
+// //       });
+// //     }
+
+// //     // 🔹 Create for original user (strict duplicate check)
+// //     const baseSRC = await createSRCForUser(
+// //       user,
+// //       normalizedPlace,
+// //       station,
+// //       radius,
+// //       kms,
+// //       MOT,
+// //       RsPerKm,
+// //       DA,
+// //       userConfig,
+// //       false
+// //     );
+
+// //     // 🔥 Propagate upward (allow duplicates)
+// //     let currentUser = await User.findById(user).select("superior");
+
+// //     const visited = new Set();
+
+// //     while (currentUser && currentUser.superior) {
+
+// //       const superiorId = currentUser.superior.toString();
+
+// //       if (visited.has(superiorId)) break;
+// //       visited.add(superiorId);
+
+// //       const superiorConfig =
+// //         (await SRCConfig.findOne({ user: superiorId })) ||
+// //         userConfig;
+
+// //       await createSRCForUser(
+// //         superiorId,
+// //         normalizedPlace,
+// //         station,
+// //         radius,
+// //         kms,
+// //         MOT,
+// //         undefined,
+// //         undefined,
+// //         superiorConfig,
+// //         true   // allow duplicates for superiors
+// //       );
+
+// //       currentUser = await User.findById(superiorId).select("superior");
+// //     }
+
+// //     res.status(201).json(baseSRC);
+
+// //   } catch (err) {
+// //     console.error("CREATE SRC ERROR:", err);
+// //     res.status(500).json({ message: err.message });
+// //   }
+// // };
+
+// // async function createSRCForUser(
+// //   userId,
+// //   placeOfWork,
+// //   station,
+// //   radius,
+// //   kms,
+// //   MOT,
+// //   RsPerKm,
+// //   DA,
+// //   config,
+// //   allowDuplicate = false
+// // ) {
+
+// //   const normalizedPlace = placeOfWork.trim();
+// //   const finalMOT = station === "HQ" ? "Local" : MOT;
+
+// //   if (!allowDuplicate) {
+// //     const duplicate = await SRC.findOne({
+// //       user: userId,
+// //       placeOfWork: normalizedPlace,
+// //       station,
+// //       MOT: finalMOT,
+// //     });
+
+// //     if (duplicate) return duplicate;
+// //   }
+
+// //   const newSRC = new SRC({
+// //   user: userId,
+// //   placeOfWork: normalizedPlace,
+// //   station,
+// //   radius: Number(radius) || 0,
+// //   kms: station === "HQ" ? 0 : Number(kms) || 0,
+// //   MOT: finalMOT,
+// //   RsPerKmOverride: station === "HQ" ? 0 : (RsPerKm ?? null),
+// //   DAOverride: DA ?? null,
+// // });
+
+// //   await newSRC.save();
+
+// //   return newSRC;
+// // }
+
+
+
+
+
+
+
+
+
+
+
+
+
 const SRC = require("../models/SRC");
 const SRCConfig = require("../models/SRCConfig");
 const User = require("../models/User");
@@ -48,578 +730,6 @@ exports.getUserSRCs = async (req, res) => {
 /* =========================
    CREATE SRC
 ========================= */
-// exports.createSRC = async (req, res) => {
-//   try {
-//     const {
-//       user,
-//       placeOfWork,
-//       station,
-//       radius,
-//       kms,
-//       MOT,
-//       RsPerKm,
-//       DA,
-//     } = req.body;
-
-//     if (!user || !placeOfWork || !station || !radius || kms == null || !MOT) {
-//       return res.status(400).json({
-//         message: "All required fields must be provided",
-//       });
-//     }
-
-//     /* 🔁 CHECK IF PLACE ALREADY EXISTS */
-//     const existingPlace = await SRC.findOne({
-//       user,
-//       placeOfWork,
-//     });
-
-//     let finalStation = station;
-//     let finalKms = kms;
-
-//     // 🧠 Force same station + kms for same place
-//     if (existingPlace) {
-//       finalStation = existingPlace.station;
-//       finalKms = existingPlace.kms;
-//     }
-
-//     /* 🔒 HQ RULES */
-//     if (finalStation === "HQ") {
-//       const existingHQ = await SRC.findOne({
-//         user,
-//         station: "HQ",
-//       });
-
-//       if (existingHQ) {
-//         return res.status(400).json({
-//           message: "User already has an HQ",
-//         });
-//       }
-
-//       if (MOT !== "Local") {
-//         return res.status(400).json({
-//           message: "HQ MOT must be Local",
-//         });
-//       }
-//     }
-
-//     /* 🔒 DUPLICATE CHECK */
-//     const duplicate = await SRC.findOne({
-//       user,
-//       placeOfWork,
-//       station: finalStation,
-//       MOT,
-//     });
-
-//     if (duplicate) {
-//       return res.status(400).json({
-//         message: "This place with the selected MOT already exists",
-//       });
-//     }
-
-//     /* 🧠 LOAD CONFIG */
-//     const config = await SRCConfig.findOne({ user });
-
-//     if (!config) {
-//       return res.status(400).json({
-//         message: "SRC configuration not set for this user",
-//       });
-//     }
-
-//     /* 🧠 APPLY DEFAULTS OR OVERRIDES (for response preview only) */
-//     const finalRsPerKm =
-//       finalStation === "HQ"
-//         ? 0
-//         : RsPerKm !== undefined
-//         ? RsPerKm
-//         : config.RsPerKm;
-
-//     const finalDA =
-//       DA !== undefined
-//         ? DA
-//         : config.DAperStation[finalStation] || 0;
-
-//     /* 🧾 CREATE SRC */
-//     const src = new SRC({
-//       user,
-//       placeOfWork: placeOfWork.trim(),
-//       station: finalStation,
-//       radius: Number(radius),
-//       kms: finalStation === "HQ" ? 0 : Number(finalKms),
-//       MOT: finalStation === "HQ" ? "Local" : MOT,
-//       RsPerKmOverride: RsPerKm !== undefined ? RsPerKm : null,
-//       DAOverride: DA !== undefined ? DA : null,
-//     });
-
-//     await src.save();
-
-//     res.status(201).json({
-//       ...src.toObject(),
-//       calculatedTA: finalRsPerKm * src.kms,
-//       calculatedDA: finalDA,
-//     });
-
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
-
-// exports.createSRC = async (req, res) => {
-//   try {
-//     const {
-//       user,
-//       placeOfWork,
-//       station,
-//       radius,
-//       kms,
-//       MOT,
-//       RsPerKm,
-//       DA,
-//     } = req.body;
-
-//     if (!user || !placeOfWork || !station || !radius || kms == null || !MOT) {
-//       return res.status(400).json({
-//         message: "All required fields must be provided",
-//       });
-//     }
-
-//     /* 🔁 CHECK IF PLACE ALREADY EXISTS */
-//     const existingPlace = await SRC.findOne({
-//       user,
-//       placeOfWork,
-//     });
-
-//     let finalStation = station;
-//     let finalKms = kms;
-
-//     if (existingPlace) {
-//       finalStation = existingPlace.station;
-//       finalKms = existingPlace.kms;
-//     }
-
-//     /* 🔒 HQ RULES */
-//     if (finalStation === "HQ") {
-//       const existingHQ = await SRC.findOne({
-//         user,
-//         station: "HQ",
-//       });
-
-//       if (existingHQ) {
-//         return res.status(400).json({
-//           message: "User already has an HQ",
-//         });
-//       }
-
-//       if (MOT !== "Local") {
-//         return res.status(400).json({
-//           message: "HQ MOT must be Local",
-//         });
-//       }
-//     }
-
-//     /* 🔒 DUPLICATE CHECK */
-//     const duplicate = await SRC.findOne({
-//       user,
-//       placeOfWork,
-//       station: finalStation,
-//       MOT,
-//     });
-
-//     if (duplicate) {
-//       return res.status(400).json({
-//         message: "This place with the selected MOT already exists",
-//       });
-//     }
-
-//     /* 🧠 LOAD USER CONFIG */
-//     const userConfig = await SRCConfig.findOne({ user });
-
-//     if (!userConfig) {
-//       return res.status(400).json({
-//         message: "SRC configuration not set for this user",
-//       });
-//     }
-
-//     /* 🧾 CREATE SRC FOR ORIGINAL USER */
-//     const baseSRC = await createSRCForUser(
-//       user,
-//       placeOfWork,
-//       finalStation,
-//       radius,
-//       finalKms,
-//       MOT,
-//       RsPerKm,
-//       DA,
-//       userConfig
-//     );
-
-//     /* =========================
-//        🔥 PROPAGATE TO SUPERIORS
-//     ========================== */
-
-// let currentUser = await User
-//   .findById(user)
-//   .select("superior");
-
-// while (currentUser?.superior) {
-
-//   const superiorId = currentUser.superior;
-
-//   const managerConfig =
-//     (await SRCConfig.findOne({ user: superiorId })) ||
-//     userConfig; // fallback
-
-//   await createSRCForUser(
-//     superiorId,
-//     placeOfWork,
-//     finalStation,
-//     radius,
-//     finalKms,
-//     MOT,
-//     undefined,
-//     undefined,
-//     managerConfig
-//   );
-
-//   currentUser = await User
-//     .findById(superiorId)
-//     .select("superior");
-// }
-
-//     res.status(201).json(baseSRC);
-
-//   } catch (err) {
-//     res.status(500).json({ message: err.message });
-//   }
-// };
-
-// async function createSRCForUser(
-//   userId,
-//   placeOfWork,
-//   station,
-//   radius,
-//   kms,
-//   MOT,
-//   RsPerKm,
-//   DA,
-//   config
-// ) {
-//   // Prevent duplicate for superior
-//   const duplicate = await SRC.findOne({
-//     user: userId,
-//     placeOfWork,
-//     station,
-//     MOT,
-//   });
-
-//   if (duplicate) return duplicate;
-
-//   const finalRsPerKm =
-//     station === "HQ"
-//       ? 0
-//       : RsPerKm !== undefined
-//       ? RsPerKm
-//       : config.RsPerKm;
-
-//   const finalDA =
-//     DA !== undefined
-//       ? DA
-//       : config.DAperStation[station] || 0;
-
-//   const newSRC = new SRC({
-//     user: userId,
-//     placeOfWork: placeOfWork.trim(),
-//     station,
-//     radius: Number(radius),
-//     kms: station === "HQ" ? 0 : Number(kms),
-//     MOT: station === "HQ" ? "Local" : MOT,
-//     RsPerKmOverride:
-//       RsPerKm !== undefined ? RsPerKm : null,
-//     DAOverride:
-//       DA !== undefined ? DA : null,
-//   });
-
-//   await newSRC.save();
-
-//   return {
-//     ...newSRC.toObject(),
-//     calculatedTA: finalRsPerKm * newSRC.kms,
-//     calculatedDA: finalDA,
-//   };
-// }
-
-
-
-
-
-// exports.createSRC = async (req, res) => {
-//   try {
-//     const {
-//       user,
-//       placeOfWork,
-//       station,
-//       radius,
-//       kms,
-//       MOT,
-//       RsPerKm,
-//       DA,
-//     } = req.body;
-
-//     if (!user || !placeOfWork || !station || radius == null || kms == null || !MOT) {
-//       return res.status(400).json({
-//         message: "All required fields must be provided",
-//       });
-//     }
-
-//     const normalizedPlace = placeOfWork.trim();
-
-//     /* 🔁 CHECK IF PLACE ALREADY EXISTS */
-//     const existingPlace = await SRC.findOne({
-//       user,
-//       placeOfWork: normalizedPlace,
-//     });
-
-//     let finalStation = station;
-//     let finalKms = kms;
-
-//     if (existingPlace) {
-//       finalStation = existingPlace.station;
-//       finalKms = existingPlace.kms;
-//     }
-
-//     /* 🔒 HQ RULES */
-//     if (finalStation === "HQ") {
-//       const existingHQ = await SRC.findOne({
-//         user,
-//         station: "HQ",
-//       });
-
-//       if (existingHQ) {
-//         return res.status(400).json({
-//           message: "User already has an HQ",
-//         });
-//       }
-
-//       if (MOT !== "Local") {
-//         return res.status(400).json({
-//           message: "HQ MOT must be Local",
-//         });
-//       }
-//     }
-
-//     /* 🔒 STRONG DUPLICATE CHECK */
-//     const duplicate = await SRC.findOne({
-//       user,
-//       placeOfWork: normalizedPlace,
-//       station: finalStation,
-//       MOT: finalStation === "HQ" ? "Local" : MOT,
-//     });
-
-//     if (duplicate) {
-//       return res.status(400).json({
-//         message: "This place with the selected MOT already exists",
-//       });
-//     }
-
-//     /* 🧠 LOAD USER CONFIG */
-//     const userConfig = await SRCConfig.findOne({ user });
-
-//     if (!userConfig) {
-//       return res.status(400).json({
-//         message: "SRC configuration not set for this user",
-//       });
-//     }
-
-//     /* 🧾 CREATE SRC FOR ORIGINAL USER */
-//     const baseSRC = await createSRCForUser(
-//       user,
-//       normalizedPlace,
-//       finalStation,
-//       radius,
-//       finalKms,
-//       MOT,
-//       RsPerKm,
-//       DA,
-//       userConfig
-//     );
-
-//     /* =========================
-//        🔥 PROPAGATE TO SUPERIORS
-//     ========================== */
-
-//     let currentUser = await User
-//       .findById(user)
-//       .select("superior");
-
-//     const visited = new Set(); // prevent infinite loops
-
-//     while (currentUser?.superior) {
-
-//       const superiorId = currentUser.superior.toString();
-
-//       if (visited.has(superiorId)) break;
-//       visited.add(superiorId);
-
-//       const superiorConfig =
-//         (await SRCConfig.findOne({ user: superiorId })) ||
-//         userConfig; // fallback
-
-//       // await createSRCForUser(
-//       //   superiorId,
-//       //   normalizedPlace,
-//       //   finalStation,
-//       //   radius,
-//       //   finalKms,
-//       //   MOT,
-//       //   undefined,
-//       //   undefined,
-//       //   superiorConfig
-//       // );
-
-//       await createSRCForUser(
-//   superiorId,
-//   normalizedPlace,
-//   finalStation,
-//   radius,
-//   finalKms,
-//   MOT,
-//   undefined,
-//   undefined,
-//   superiorConfig,
-//   true   // 👈 allow duplicates
-// );
-
-//       currentUser = await User
-//         .findById(superiorId)
-//         .select("superior");
-//     }
-
-//     res.status(201).json(baseSRC);
-
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// };
-
-
-
-
-// // async function createSRCForUser(
-// //   userId,
-// //   placeOfWork,
-// //   station,
-// //   radius,
-// //   kms,
-// //   MOT,
-// //   RsPerKm,
-// //   DA,
-// //   config
-// // ) {
-
-// //   const normalizedPlace = placeOfWork.trim();
-
-// //   const finalMOT = station === "HQ" ? "Local" : MOT;
-
-// //   // 🔒 DUPLICATE PROTECTION
-// //   const duplicate = await SRC.findOne({
-// //     user: userId,
-// //     placeOfWork: normalizedPlace,
-// //     station,
-// //     MOT: finalMOT,
-// //   });
-
-// //   if (duplicate) return duplicate;
-
-// //   const finalRsPerKm =
-// //     station === "HQ"
-// //       ? 0
-// //       : RsPerKm !== undefined
-// //       ? RsPerKm
-// //       : config?.RsPerKm || 0;
-
-// //   const finalDA =
-// //     DA !== undefined
-// //       ? DA
-// //       : config?.DAperStation?.[station] || 0;
-
-// //   const newSRC = new SRC({
-// //     user: userId,
-// //     placeOfWork: normalizedPlace,
-// //     station,
-// //     radius: Number(radius) || 0,
-// //     kms: station === "HQ" ? 0 : Number(kms) || 0,
-// //     MOT: finalMOT,
-// //     RsPerKmOverride: RsPerKm ?? null,
-// //     DAOverride: DA ?? null,
-// //   });
-
-// //   await newSRC.save();
-
-// //   return {
-// //     ...newSRC.toObject(),
-// //     calculatedTA: finalRsPerKm * newSRC.kms,
-// //     calculatedDA: finalDA,
-// //   };
-// // }
-
-
-
-// async function createSRCForUser(
-//   userId,
-//   placeOfWork,
-//   station,
-//   radius,
-//   kms,
-//   MOT,
-//   RsPerKm,
-//   DA,
-//   config,
-//   allowDuplicate = false   // 👈 NEW FLAG
-// ) {
-
-//   const normalizedPlace = placeOfWork.trim();
-//   const finalMOT = station === "HQ" ? "Local" : MOT;
-
-//   // 🔒 Duplicate protection ONLY if not allowed
-//   if (!allowDuplicate) {
-//     const duplicate = await SRC.findOne({
-//       user: userId,
-//       placeOfWork: normalizedPlace,
-//       station,
-//       MOT: finalMOT,
-//     });
-
-//     if (duplicate) return duplicate;
-//   }
-
-//   const finalRsPerKm =
-//     station === "HQ"
-//       ? 0
-//       : RsPerKm !== undefined
-//       ? RsPerKm
-//       : config?.RsPerKm || 0;
-
-//   const finalDA =
-//     DA !== undefined
-//       ? DA
-//       : config?.DAperStation?.[station] || 0;
-
-//   const newSRC = new SRC({
-//     user: userId,
-//     placeOfWork: normalizedPlace,
-//     station,
-//     radius: Number(radius) || 0,
-//     kms: station === "HQ" ? 0 : Number(kms) || 0,
-//     MOT: finalMOT,
-//     RsPerKmOverride: RsPerKm ?? null,
-//     DAOverride: DA ?? null,
-//   });
-
-//   await newSRC.save();
-
-//   return newSRC;
-// }
-
 exports.createSRC = async (req, res) => {
   try {
     const {
@@ -649,8 +759,8 @@ exports.createSRC = async (req, res) => {
       });
     }
 
-    // 🔹 Create for original user (strict duplicate check)
     const baseSRC = await createSRCForUser(
+      user,
       user,
       normalizedPlace,
       station,
@@ -663,15 +773,13 @@ exports.createSRC = async (req, res) => {
       false
     );
 
-    // 🔥 Propagate upward (allow duplicates)
+    // 🔥 Propagate upward
     let currentUser = await User.findById(user).select("superior");
-
     const visited = new Set();
 
     while (currentUser && currentUser.superior) {
 
       const superiorId = currentUser.superior.toString();
-
       if (visited.has(superiorId)) break;
       visited.add(superiorId);
 
@@ -681,6 +789,7 @@ exports.createSRC = async (req, res) => {
 
       await createSRCForUser(
         superiorId,
+        user,
         normalizedPlace,
         station,
         radius,
@@ -689,7 +798,7 @@ exports.createSRC = async (req, res) => {
         undefined,
         undefined,
         superiorConfig,
-        true   // allow duplicates for superiors
+        true
       );
 
       currentUser = await User.findById(superiorId).select("superior");
@@ -704,9 +813,12 @@ exports.createSRC = async (req, res) => {
 };
 
 
-
+/* =========================
+   INTERNAL CREATE FUNCTION
+========================= */
 async function createSRCForUser(
   userId,
+  originUserId,
   placeOfWork,
   station,
   radius,
@@ -719,66 +831,225 @@ async function createSRCForUser(
 ) {
 
   const normalizedPlace = placeOfWork.trim();
-  const finalMOT = station === "HQ" ? "Local" : MOT;
 
+  /* ===============================
+     BASE USER
+  =============================== */
   if (!allowDuplicate) {
+
     const duplicate = await SRC.findOne({
       user: userId,
+      originUser: originUserId,
       placeOfWork: normalizedPlace,
       station,
-      MOT: finalMOT,
     });
 
     if (duplicate) return duplicate;
+
+    const newSRC = new SRC({
+      user: userId,
+      originUser: originUserId,
+      placeOfWork: normalizedPlace,
+      station,
+      radius: Number(radius) || 0,
+      kms: station === "HQ" ? 0 : Number(kms) || 0,
+      MOT: station === "HQ" ? "Local" : MOT,
+      RsPerKmOverride: station === "HQ" ? 0 : (RsPerKm ?? null),
+      TAOverride: null,
+      DAOverride: DA ?? null,
+      isManuallyEdited: false,
+    });
+
+    await newSRC.save();
+    return newSRC;
   }
 
-  const newSRC = new SRC({
+  /* ===============================
+     SUPERIOR PROPAGATION
+  =============================== */
+
+  const existing = await SRC.findOne({
+    user: userId,
+    placeOfWork: normalizedPlace,
+  });
+
+  if (existing) return existing;
+
+const newSRC = new SRC({
   user: userId,
+  originUser: originUserId,
   placeOfWork: normalizedPlace,
-  station,
+  station: "-",
   radius: Number(radius) || 0,
-  kms: station === "HQ" ? 0 : Number(kms) || 0,
-  MOT: finalMOT,
-  RsPerKmOverride: station === "HQ" ? 0 : (RsPerKm ?? null),
-  DAOverride: DA ?? null,
+  kms: null,
+  MOT: null,
+  RsPerKmOverride: config?.RsPerKm ?? 0,
+  TAOverride: 0,
+  DAOverride: 0,
 });
 
-  await newSRC.save();
 
+  await newSRC.save();
   return newSRC;
 }
+
 
 /* =========================
    UPDATE SRC
 ========================= */
+// exports.updateSRC = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const updates = { ...req.body };
+
+//     const src = await SRC.findById(id);
+//     if (!src) {
+//       return res.status(404).json({ message: "SRC not found" });
+//     }
+
+//     if (updates.placeOfWork) {
+//       updates.placeOfWork = updates.placeOfWork.trim();
+//     }
+
+//     const duplicate = await SRC.findOne({
+//       user: src.user,
+//       _id: { $ne: src._id },
+//       placeOfWork: updates.placeOfWork,
+//     });
+
+//     if (duplicate) {
+//       return res.status(400).json({
+//         message: "Place of work already exists",
+//       });
+//     }
+
+//     if (updates.station === "HQ") {
+//       updates.MOT = "Local";
+//       updates.kms = 0;
+//     }
+
+//     Object.assign(src, updates);
+
+//     src.isManuallyEdited = true;
+
+//     await src.save();
+
+//     res.json(src);
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+// exports.updateSRC = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const updates = { ...req.body };
+
+//     const src = await SRC.findById(id);
+//     if (!src) {
+//       return res.status(404).json({ message: "SRC not found" });
+//     }
+
+//     if (updates.placeOfWork) {
+//       updates.placeOfWork = updates.placeOfWork.trim();
+//     }
+
+//     const duplicate = await SRC.findOne({
+//       user: src.user,
+//       _id: { $ne: src._id },
+//       placeOfWork: updates.placeOfWork,
+//     });
+
+//     if (duplicate) {
+//       return res.status(400).json({
+//         message: "Place of work already exists",
+//       });
+//     }
+
+//     // HQ rules
+//     if (updates.station === "HQ") {
+//       updates.MOT = "Local";
+//       updates.kms = 0;
+//       updates.RsPerKmOverride = 0;
+//       updates.TAOverride = 0;
+//     }
+
+//     Object.assign(src, updates);
+
+//     await src.save();
+
+//     res.json(src);
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.updateSRC = async (req, res) => {
   try {
     const { id } = req.params;
-    const { RsPerKm, DA, ...updates } = req.body;
+    const {
+      placeOfWork,
+      station,
+      radius,
+      kms,
+      MOT,
+      RsPerKm,
+      DA,
+      TA,
+    } = req.body;
 
     const src = await SRC.findById(id);
-
     if (!src) {
       return res.status(404).json({ message: "SRC not found" });
     }
 
-    /* 🔒 HQ IMMUTABLE RULES */
-    if (src.station === "HQ") {
-      updates.MOT = "Local";
-      updates.kms = 0;
-      src.RsPerKmOverride = null;
-      src.DAOverride = null;
+    /* ---------- PLACE DUPLICATE CHECK ---------- */
+    if (placeOfWork) {
+      const trimmed = placeOfWork.trim();
+
+      const duplicate = await SRC.findOne({
+        user: src.user,
+        _id: { $ne: src._id },
+        placeOfWork: trimmed,
+      });
+
+      if (duplicate) {
+        return res.status(400).json({
+          message: "Place of work already exists",
+        });
+      }
+
+      src.placeOfWork = trimmed;
     }
 
+    /* ---------- BASIC FIELD UPDATES ---------- */
+    if (station !== undefined) src.station = station;
+    if (radius !== undefined) src.radius = Number(radius);
+    if (kms !== undefined) src.kms = Number(kms);
+    if (MOT !== undefined) src.MOT = MOT;
+
+    /* ---------- OVERRIDES (THIS WAS THE BUG) ---------- */
     if (RsPerKm !== undefined) {
-      src.RsPerKmOverride = RsPerKm;
+      src.RsPerKmOverride = Number(RsPerKm);
     }
 
     if (DA !== undefined) {
-      src.DAOverride = DA;
+      src.DAOverride = Number(DA);
     }
 
-    Object.assign(src, updates);
+    if (TA !== undefined) {
+      src.TAOverride = Number(TA);
+    }
+
+    /* ---------- HQ SAFETY ---------- */
+    if (src.station === "HQ") {
+      src.MOT = "Local";
+      src.kms = 0;
+      src.RsPerKmOverride = 0;
+      src.TAOverride = 0;
+    }
 
     await src.save();
 
@@ -791,7 +1062,43 @@ exports.updateSRC = async (req, res) => {
 
 
 /* =========================
-   DELETE SRC (HARD DELETE)
+   APPLY CONFIG TO SRCS
+========================= */
+exports.applyConfigToSRCs = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const config = await SRCConfig.findOne({ user: userId });
+    if (!config) {
+      return res.status(404).json({ message: "Config not found" });
+    }
+
+    const srcs = await SRC.find({ user: userId });
+
+    for (let src of srcs) {
+
+      if (src.isManuallyEdited) continue;
+
+      src.RsPerKmOverride = config.RsPerKm ?? 0;
+
+      if (src.station && config.DAperStation) {
+        src.DAOverride =
+          config.DAperStation[src.station] ?? 0;
+      }
+
+      await src.save();
+    }
+
+    res.json({ message: "SRCs updated from config" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+/* =========================
+   DELETE SRC
 ========================= */
 exports.deleteSRC = async (req, res) => {
   try {
@@ -810,8 +1117,9 @@ exports.deleteSRC = async (req, res) => {
   }
 };
 
+
 /* =========================
-   GET MY SRC (EXECUTIVE)
+   GET MY SRC
 ========================= */
 exports.getMySRCs = async (req, res) => {
   try {

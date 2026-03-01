@@ -5,6 +5,7 @@ const {
   getSRCConfig,
   updateRsPerKm,
   updateDAperStation,
+  applyConfigToSRCs,
   getMySRCConfig,
 } = require("../controllers/srcConfigController");
 
@@ -28,6 +29,9 @@ router.patch(
   managerOrAdmin,
   updateDAperStation
 );
+
+router.put("/apply/:userId", applyConfigToSRCs);
+
 
 
 

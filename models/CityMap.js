@@ -49,6 +49,13 @@ const cityMapSchema = new mongoose.Schema({
     index: true,
   },
 
+  originUser: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  required: true,
+  index: true,
+},
+
   city: {
     type: String,
     required: true,

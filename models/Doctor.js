@@ -162,6 +162,12 @@ const doctorSchema = new mongoose.Schema(
       index: true,
     },
 
+    order: {
+  type: Number,
+  default: 0,
+  index: true,
+},
+
     rxx: {
       type: Boolean,
       default: false,
