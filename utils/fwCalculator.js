@@ -26,7 +26,8 @@ async function calculateFWExpense(userId, placeOfWork, MOT) {
       ? src.RsPerKmOverride
       : srcConfig.RsPerKm;
 
-  const TA = kms * rsPerKm;
+  const TA =
+    src.TAOverride ?? (kms * rsPerKm);
 
   const DA =
     src.DAOverride !== null

@@ -728,7 +728,7 @@ exports.getUserSRCs = async (req, res) => {
 
 
 /* =========================
-   CREATE SRC
+   CREATE SRC (RESTORED)
 ========================= */
 exports.createSRC = async (req, res) => {
   try {
@@ -741,6 +741,7 @@ exports.createSRC = async (req, res) => {
       MOT,
       RsPerKm,
       DA,
+      TA
     } = req.body;
 
     if (!user || !placeOfWork || !station || radius == null || kms == null || !MOT) {
@@ -759,9 +760,12 @@ exports.createSRC = async (req, res) => {
       });
     }
 
+    /* ===============================
+       CREATE FOR ORIGINAL USER
+    =============================== */
     const baseSRC = await createSRCForUser(
-      user,
-      user,
+      user,                 // owner
+      user,                 // originUser (IMPORTANT)
       normalizedPlace,
       station,
       radius,
@@ -769,17 +773,21 @@ exports.createSRC = async (req, res) => {
       MOT,
       RsPerKm,
       DA,
+      TA,
       userConfig,
       false
     );
 
-    // 🔥 Propagate upward
+    /* ===============================
+       PROPAGATE UPWARD
+    =============================== */
     let currentUser = await User.findById(user).select("superior");
     const visited = new Set();
 
     while (currentUser && currentUser.superior) {
 
       const superiorId = currentUser.superior.toString();
+
       if (visited.has(superiorId)) break;
       visited.add(superiorId);
 
@@ -788,8 +796,8 @@ exports.createSRC = async (req, res) => {
         userConfig;
 
       await createSRCForUser(
-        superiorId,
-        user,
+        superiorId,          // now owner becomes superior
+        user,                // origin remains original user
         normalizedPlace,
         station,
         radius,
@@ -811,7 +819,89 @@ exports.createSRC = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+/* =========================
+   INTERNAL CREATE FUNCTION
+========================= */
+// async function createSRCForUser(
+//   userId,
+//   originUserId,
+//   placeOfWork,
+//   station,
+//   radius,
+//   kms,
+//   MOT,
+//   RsPerKm,
+//   DA,
+//   config,
+//   allowDuplicate = false
+// ) {
 
+//   const normalizedPlace = placeOfWork.trim();
+
+//   /* ===============================
+//      BASE USER
+//   =============================== */
+//   if (!allowDuplicate) {
+
+//     const duplicate = await SRC.findOne({
+//       user: userId,
+//       originUser: originUserId,
+//       placeOfWork: normalizedPlace,
+//       station,
+//     });
+
+//     if (duplicate) return duplicate;
+
+//     const newSRC = new SRC({
+//       user: userId,
+//       originUser: originUserId,
+//       placeOfWork: normalizedPlace,
+//       station,
+//       radius: Number(radius) || 0,
+//       kms: station === "HQ" ? 0 : Number(kms) || 0,
+//       MOT: station === "HQ" ? "Local" : MOT,
+//       RsPerKmOverride: station === "HQ" ? 0 : (RsPerKm ?? null),
+//       TAOverride: null,
+//       DAOverride: DA ?? null,
+//       isManuallyEdited: false,
+//     });
+
+//     await newSRC.save();
+//     return newSRC;
+//   }
+
+//   /* ===============================
+//      SUPERIOR PROPAGATION
+//   =============================== */
+
+//   const existing = await SRC.findOne({
+//   user: userId,
+//   originUser: originUserId,
+//   placeOfWork: normalizedPlace,
+//   station,
+//   kms: Number(kms) || 0,
+//   MOT,
+// });
+
+//   if (existing) return existing;
+
+// const newSRC = new SRC({
+//   user: userId,
+//   originUser: originUserId,
+//   placeOfWork: normalizedPlace,
+//   station: "-",
+//   radius: Number(radius) || 0,
+//   kms: null,
+//   MOT: null,
+//   RsPerKmOverride: config?.RsPerKm ?? 0,
+//   TAOverride: 0,
+//   DAOverride: 0,
+// });
+
+
+//   await newSRC.save();
+//   return newSRC;
+// }
 
 /* =========================
    INTERNAL CREATE FUNCTION
@@ -826,25 +916,16 @@ async function createSRCForUser(
   MOT,
   RsPerKm,
   DA,
+  TA,
   config,
   allowDuplicate = false
 ) {
-
   const normalizedPlace = placeOfWork.trim();
 
   /* ===============================
-     BASE USER
+     BASE USER (ALWAYS ALLOW)
   =============================== */
   if (!allowDuplicate) {
-
-    const duplicate = await SRC.findOne({
-      user: userId,
-      originUser: originUserId,
-      placeOfWork: normalizedPlace,
-      station,
-    });
-
-    if (duplicate) return duplicate;
 
     const newSRC = new SRC({
       user: userId,
@@ -855,7 +936,7 @@ async function createSRCForUser(
       kms: station === "HQ" ? 0 : Number(kms) || 0,
       MOT: station === "HQ" ? "Local" : MOT,
       RsPerKmOverride: station === "HQ" ? 0 : (RsPerKm ?? null),
-      TAOverride: null,
+      TAOverride: TA ?? null,
       DAOverride: DA ?? null,
       isManuallyEdited: false,
     });
@@ -866,28 +947,29 @@ async function createSRCForUser(
 
   /* ===============================
      SUPERIOR PROPAGATION
+     (BLOCK ONLY SAME placeOfWork)
   =============================== */
 
   const existing = await SRC.findOne({
-    user: userId,
+    user: userId,               // superior
     placeOfWork: normalizedPlace,
   });
 
   if (existing) return existing;
 
-const newSRC = new SRC({
-  user: userId,
-  originUser: originUserId,
-  placeOfWork: normalizedPlace,
-  station: "-",
-  radius: Number(radius) || 0,
-  kms: null,
-  MOT: null,
-  RsPerKmOverride: config?.RsPerKm ?? 0,
-  TAOverride: 0,
-  DAOverride: 0,
-});
-
+  const newSRC = new SRC({
+    user: userId,
+    originUser: originUserId,
+    placeOfWork: normalizedPlace,
+    station: "-",
+    radius: Number(radius) || 0,
+    kms: null,
+    MOT: null,
+    RsPerKmOverride: config?.RsPerKm ?? 0,
+    TAOverride: 0,
+    DAOverride: 0,
+    isManuallyEdited: false,
+  });
 
   await newSRC.save();
   return newSRC;
@@ -1131,3 +1213,24 @@ exports.getMySRCs = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
