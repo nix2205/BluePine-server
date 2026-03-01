@@ -1123,8 +1123,9 @@ exports.createNFWExpense = async (req, res) => {
       });
     }
 
-    const today = new Date();
-
+const today = new Date(
+  new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+);
     // const existing = await checkAlreadySubmittedToday(userId, today);
     // if (existing) {
     //   return res.status(400).json({
