@@ -1183,17 +1183,67 @@ exports.applyConfigToSRCs = async (req, res) => {
 /* =========================
    DELETE SRC
 ========================= */
+// exports.deleteSRC = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const deleted = await SRC.findByIdAndDelete(id);
+
+//     if (!deleted) {
+//       return res.status(404).json({ message: "SRC not found" });
+//     }
+
+//     res.json({ message: "SRC permanently deleted" });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+
+
+/* =========================
+   DELETE SRC (WITH UPWARD PROPAGATION)
+========================= */
 exports.deleteSRC = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deleted = await SRC.findByIdAndDelete(id);
+    const deleted = await SRC.findById(id);
 
     if (!deleted) {
       return res.status(404).json({ message: "SRC not found" });
     }
 
-    res.json({ message: "SRC permanently deleted" });
+    const { placeOfWork, originUser } = deleted;
+
+    // Delete the original
+    await deleted.deleteOne();
+
+    /* ===============================
+       PROPAGATE DELETE UPWARD
+    =============================== */
+
+    let currentUser = await User.findById(originUser).select("superior");
+    const visited = new Set();
+
+    while (currentUser && currentUser.superior) {
+      const superiorId = currentUser.superior.toString();
+
+      if (visited.has(superiorId)) break;
+      visited.add(superiorId);
+
+      await SRC.deleteMany({
+        user: superiorId,
+        placeOfWork,
+        originUser,
+      });
+
+      currentUser = await User.findById(superiorId).select("superior");
+    }
+
+    res.json({ message: `"${placeOfWork}" deleted for all managers and admin.`});
 
   } catch (err) {
     res.status(500).json({ message: err.message });
