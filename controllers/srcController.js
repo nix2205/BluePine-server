@@ -717,8 +717,11 @@ exports.getUserSRCs = async (req, res) => {
   try {
     const { userId } = req.params;
 
+    // const srcs = await SRC.find({ user: userId })
+    //   .sort({ station: 1, placeOfWork: 1 });
     const srcs = await SRC.find({ user: userId })
-      .sort({ station: 1, placeOfWork: 1 });
+  .populate("originUser", "userId") // only fetch userId field
+  .sort({ station: 1, placeOfWork: 1 });
 
     res.json(srcs);
   } catch (err) {
@@ -1257,6 +1260,7 @@ exports.deleteSRC = async (req, res) => {
 exports.getMySRCs = async (req, res) => {
   try {
     const srcs = await SRC.find({ user: req.user._id })
+      .populate("originUser", "userId")
       .sort({ station: 1, placeOfWork: 1 });
 
     res.json(srcs);
