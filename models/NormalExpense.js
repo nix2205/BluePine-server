@@ -11,10 +11,11 @@ const normalExpenseSchema = new mongoose.Schema(
 
     // Reporting date (used for grouping, approvals)
     date: {
-      type: Date,
-      required: true,
-      index: true,
-    },
+  type: String,
+  required: true,
+  index: true,
+  match: /^\d{2}-\d{2}-\d{4}$/, // DD-MM-YYYY
+},
 
     // Reporting time (UI display, not calculations)
     time: {

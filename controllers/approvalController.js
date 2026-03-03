@@ -1,3 +1,67 @@
+// // // // const Approval = require("../models/Approval");
+// // // // const User = require("../models/User");
+
+// // // // const MONTHS = [
+// // // //   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+// // // //   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+// // // // ];
+
+// // // // // Get current month string
+// // // // const getCurrentMonth = () => {
+// // // //   const now = new Date();
+// // // //   return MONTHS[now.getMonth()];
+// // // // };
+
+// // // // // Get previous two months
+// // // // const getLastThreeMonths = () => {
+// // // //   const now = new Date();
+// // // //   const currentIndex = now.getMonth();
+
+// // // //   const months = [];
+
+// // // //   for (let i = 0; i < 3; i++) {
+// // // //     const index = (currentIndex - i + 12) % 12;
+// // // //     months.push(MONTHS[index]);
+// // // //   }
+
+// // // //   return months; // [CURRENT, PREV1, PREV2]
+// // // // };
+
+// // // // // Create approvals for new month (for all users)
+// // // // exports.ensureMonthlyApprovals = async () => {
+// // // //   const currentMonth = getCurrentMonth();
+
+// // // //   const users = await User.find();
+
+// // // //   for (const user of users) {
+// // // //     await Approval.findOneAndUpdate(
+// // // //       { user: user._id, month: currentMonth },
+// // // //       {
+// // // //         user: user._id,
+// // // //         month: currentMonth,
+// // // //         normalExpTotal: 0,
+// // // //         otherExpTotal: 0,
+// // // //         lastReported: null,
+// // // //         approvedByUser: false,
+// // // //         approvedBySuperior: false,
+// // // //       },
+// // // //       { upsert: true, new: true }
+// // // //     );
+// // // //   }
+
+// // // //   // Delete months older than 3-month window
+// // // //   const allowedMonths = getLastThreeMonths();
+
+// // // //   await Approval.deleteMany({
+// // // //     month: { $nin: allowedMonths }
+// // // //   });
+// // // // };
+
+
+
+
+
+
 // // // const Approval = require("../models/Approval");
 // // // const User = require("../models/User");
 
@@ -6,13 +70,11 @@
 // // //   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
 // // // ];
 
-// // // // Get current month string
 // // // const getCurrentMonth = () => {
 // // //   const now = new Date();
 // // //   return MONTHS[now.getMonth()];
 // // // };
 
-// // // // Get previous two months
 // // // const getLastThreeMonths = () => {
 // // //   const now = new Date();
 // // //   const currentIndex = now.getMonth();
@@ -24,13 +86,12 @@
 // // //     months.push(MONTHS[index]);
 // // //   }
 
-// // //   return months; // [CURRENT, PREV1, PREV2]
+// // //   return months;
 // // // };
 
-// // // // Create approvals for new month (for all users)
+// // // // 🔥 CORE FUNCTION
 // // // exports.ensureMonthlyApprovals = async () => {
 // // //   const currentMonth = getCurrentMonth();
-
 // // //   const users = await User.find();
 
 // // //   for (const user of users) {
@@ -45,11 +106,10 @@
 // // //         approvedByUser: false,
 // // //         approvedBySuperior: false,
 // // //       },
-// // //       { upsert: true, new: true }
+// // //       { upsert: true }
 // // //     );
 // // //   }
 
-// // //   // Delete months older than 3-month window
 // // //   const allowedMonths = getLastThreeMonths();
 
 // // //   await Approval.deleteMany({
@@ -58,40 +118,120 @@
 // // // };
 
 
+// // // // ============================
+// // // // GET LOGGED-IN USER APPROVALS
+// // // // ============================
+// // // exports.getMyApprovals = async (req, res) => {
+// // //   try {
+// // //     const approvals = await Approval.find({
+// // //       user: req.user._id
+// // //     }).sort({ month: -1 });
+
+// // //     res.json(approvals);
+
+// // //   } catch (err) {
+// // //     res.status(500).json({ message: "Server error" });
+// // //   }
+// // // };
+
+
+// // // // ============================
+// // // // GET SPECIFIC USER APPROVALS
+// // // // ============================
+// // // exports.getUserApprovals = async (req, res) => {
+// // //   try {
+// // //     const approvals = await Approval.find({
+// // //       user: req.params.userId
+// // //     }).sort({ month: -1 });
+
+// // //     res.json(approvals);
+
+// // //   } catch (err) {
+// // //     res.status(500).json({ message: "Server error" });
+// // //   }
+// // // };
+
+
+// // // // ============================
+// // // // MANUAL TRIGGER (OPTIONAL)
+// // // // ============================
+// // // exports.triggerMonthlyCheck = async (req, res) => {
+// // //   try {
+// // //     await exports.ensureMonthlyApprovals();
+
+// // //     res.json({ message: "Monthly approval check executed successfully" });
+
+// // //   } catch (err) {
+// // //     res.status(500).json({ message: "Server error" });
+// // //   }
+// // // };
 
 
 
 
-// // const Approval = require("../models/Approval");
-// // const User = require("../models/User");
 
-// // const MONTHS = [
-// //   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-// //   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
-// // ];
 
-// // const getCurrentMonth = () => {
-// //   const now = new Date();
-// //   return MONTHS[now.getMonth()];
-// // };
+// const Approval = require("../models/Approval");
+// const User = require("../models/User");
+// const NormalExpense = require("../models/NormalExpense");
+// const OtherExpense = require("../models/OtherExpense");
 
-// // const getLastThreeMonths = () => {
-// //   const now = new Date();
-// //   const currentIndex = now.getMonth();
+// const MONTHS = [
+//   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+//   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+// ];
 
-// //   const months = [];
+// const getCurrentMonth = () => {
+//   const now = new Date();
+//   return MONTHS[now.getMonth()];
+// };
 
-// //   for (let i = 0; i < 3; i++) {
-// //     const index = (currentIndex - i + 12) % 12;
-// //     months.push(MONTHS[index]);
-// //   }
+// const getMonthFromDate = (dateObj) => {
+//   return MONTHS[dateObj.getMonth()];
+// };
 
-// //   return months;
-// // };
+// const getLastThreeMonths = () => {
+//   const now = new Date();
+//   const currentIndex = now.getMonth();
 
-// // // 🔥 CORE FUNCTION
+//   const months = [];
+
+//   for (let i = 0; i < 3; i++) {
+//     const index = (currentIndex - i + 12) % 12;
+//     months.push(MONTHS[index]);
+//   }
+
+//   return months; // [CURRENT, PREV1, PREV2]
+// };
+
+
+// const getPreviousMonth = () => {
+//   const now = new Date();
+//   const index = (now.getMonth() - 1 + 12) % 12;
+//   return MONTHS[index];
+// };
+
+// // const approvals = await Approval.find({
+// //   user: user._id,
+// //   month: { $in: [prevMonthName, currentMonthName] }
+// // });
+
+// // const approvalMap = {};
+
+// // approvals.forEach(a => {
+// //   approvalMap[a.month] = {
+// //     approvedByUser: a.approvedByUser,
+// //     approvedBySuperior: a.approvedBySuperior,
+// //     NWdays: a.NWdays
+// //   };
+// // });
+
 // // exports.ensureMonthlyApprovals = async () => {
+
+// //   const now = new Date();
 // //   const currentMonth = getCurrentMonth();
+
+// //   // 1️⃣ Create approval for all users (if not exists)
 // //   const users = await User.find();
 
 // //   for (const user of users) {
@@ -110,61 +250,421 @@
 // //     );
 // //   }
 
+// //   // 2️⃣ Keep only last 3 months (Approval collection)
 // //   const allowedMonths = getLastThreeMonths();
 
 // //   await Approval.deleteMany({
 // //     month: { $nin: allowedMonths }
 // //   });
+
+// //   // 3️⃣ HARD DELETE OLD EXPENSES
+
+// //   // Start of month 2 months ago
+// //   const thresholdDate = new Date(
+// //     now.getFullYear(),
+// //     now.getMonth() - 2,
+// //     1
+// //   );
+
+// //   await NormalExpense.deleteMany({
+// //     date: { $lt: thresholdDate }
+// //   });
+
+// //   await OtherExpense.deleteMany({
+// //     date: { $lt: thresholdDate }
+// //   });
 // // };
 
+// // exports.ensureMonthlyApprovals = async () => {
 
-// // // ============================
-// // // GET LOGGED-IN USER APPROVALS
-// // // ============================
-// // exports.getMyApprovals = async (req, res) => {
-// //   try {
-// //     const approvals = await Approval.find({
-// //       user: req.user._id
-// //     }).sort({ month: -1 });
+// //   const now = new Date();
+// //   const currentMonth = getCurrentMonth();
 
-// //     res.json(approvals);
+// //   // 1️⃣ Create approval for all users (if not exists)
+// //   const users = await User.find();
 
-// //   } catch (err) {
-// //     res.status(500).json({ message: "Server error" });
+// //   for (const user of users) {
+// //     await Approval.findOneAndUpdate(
+// //       { user: user._id, month: currentMonth },
+// //       {
+// //         user: user._id,
+// //         month: currentMonth,
+// //         normalExpTotal: 0,
+// //         otherExpTotal: 0,
+// //         NWdays: 0, // ✅ ADDED
+// //         lastReported: null,
+// //         approvedByUser: false,
+// //         approvedBySuperior: false,
+// //       },
+// //       { upsert: true }
+// //     );
 // //   }
+
+// //   // 2️⃣ Keep only last 3 months (Approval collection)
+// //   const allowedMonths = getLastThreeMonths();
+
+// //   await Approval.deleteMany({
+// //     month: { $nin: allowedMonths }
+// //   });
+
+// //   // 3️⃣ HARD DELETE OLD EXPENSES
+
+// //   const thresholdDate = new Date(
+// //     now.getFullYear(),
+// //     now.getMonth() - 2,
+// //     1
+// //   );
+
+// //   await NormalExpense.deleteMany({
+// //     date: { $lt: thresholdDate }
+// //   });
+
+// //   await OtherExpense.deleteMany({
+// //     date: { $lt: thresholdDate }
+// //   });
 // // };
 
 
-// // // ============================
-// // // GET SPECIFIC USER APPROVALS
-// // // ============================
-// // exports.getUserApprovals = async (req, res) => {
-// //   try {
-// //     const approvals = await Approval.find({
-// //       user: req.params.userId
-// //     }).sort({ month: -1 });
+// // exports.ensureMonthlyApprovals = async () => {
 
-// //     res.json(approvals);
+// //   const now = new Date();
+// //   const currentMonth = getCurrentMonth();
 
-// //   } catch (err) {
-// //     res.status(500).json({ message: "Server error" });
+// //   const users = await User.find();
+
+// //   for (const user of users) {
+// //     await Approval.findOneAndUpdate(
+// //       { user: user._id, month: currentMonth },
+// //       {
+// //         user: user._id,
+// //         month: currentMonth,
+// //         NWdays: 0,
+// //         lastReported: null,
+// //         approvedByUser: false,
+// //         approvedBySuperior: false,
+// //       },
+// //       { upsert: true }
+// //     );
 // //   }
+
+// //   // Keep only last 3 months
+// //   const allowedMonths = getLastThreeMonths();
+
+// //   await Approval.deleteMany({
+// //     month: { $nin: allowedMonths }
+// //   });
+
+// //   // Delete old expenses
+// //   const thresholdDate = new Date(
+// //     now.getFullYear(),
+// //     now.getMonth() - 2,
+// //     1
+// //   );
+
+// //   await NormalExpense.deleteMany({
+// //     date: { $lt: thresholdDate }
+// //   });
+
+// //   await OtherExpense.deleteMany({
+// //     date: { $lt: thresholdDate }
+// //   });
 // // };
 
+// exports.ensureMonthlyApprovals = async () => {
 
-// // // ============================
-// // // MANUAL TRIGGER (OPTIONAL)
-// // // ============================
-// // exports.triggerMonthlyCheck = async (req, res) => {
-// //   try {
-// //     await exports.ensureMonthlyApprovals();
+//   const now = new Date();
+//   const currentMonth = getCurrentMonth();
 
-// //     res.json({ message: "Monthly approval check executed successfully" });
+//   const users = await User.find();
 
-// //   } catch (err) {
-// //     res.status(500).json({ message: "Server error" });
-// //   }
-// // };
+//   for (const user of users) {
+//     await Approval.findOneAndUpdate(
+//       { user: user._id, month: currentMonth },
+//       {
+//         $setOnInsert: {
+//           user: user._id,
+//           month: currentMonth,
+//           NWdays: 0,
+//           lastReported: null,
+//           approvedByUser: false,
+//           approvedBySuperior: false,
+//           TR: 0,
+// normalExpTotal: 0,
+// otherExpTotal: 0,
+//         }
+//       },
+//       { upsert: true }
+//     );
+//   }
+
+//   const allowedMonths = getLastThreeMonths();
+
+//   await Approval.deleteMany({
+//     month: { $nin: allowedMonths }
+//   });
+
+//   const thresholdDate = new Date(
+//     now.getFullYear(),
+//     now.getMonth() - 2,
+//     1
+//   );
+
+//   await NormalExpense.deleteMany({
+//     date: { $lt: thresholdDate }
+//   });
+
+//   await OtherExpense.deleteMany({
+//     date: { $lt: thresholdDate }
+//   });
+// };
+
+
+// exports.getMyApprovals = async (req, res) => {
+//   try {
+//     const approvals = await Approval.find({
+//       user: req.user._id
+//     });
+
+//     res.json(approvals);
+
+//   } catch (err) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+// /* ============================
+//    GET SPECIFIC USER APPROVALS
+// ============================ */
+// exports.getUserApprovals = async (req, res) => {
+//   try {
+//     const approvals = await Approval.find({
+//       user: req.params.userId
+//     });
+
+//     res.json(approvals);
+
+//   } catch (err) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+// /* ============================
+//    MANUAL TRIGGER (OPTIONAL)
+// ============================ */
+// exports.triggerMonthlyCheck = async (req, res) => {
+//   try {
+//     await exports.ensureMonthlyApprovals();
+
+//     res.json({
+//       message: "Monthly approval check executed successfully"
+//     });
+
+//   } catch (err) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+// /* ============================
+//    USER SUBMIT MONTH APPROVAL
+// ============================ */
+// exports.submitMyApproval = async (req, res) => {
+//   try {
+//     const userId = req.user._id;
+//     const { month } = req.body; // Expect "JAN", "FEB", etc.
+
+//     if (!month) {
+//       return res.status(400).json({
+//         message: "Month is required",
+//       });
+//     }
+
+//     const approval = await Approval.findOne({
+//       user: userId,
+//       month,
+//     });
+
+//     if (!approval) {
+//       return res.status(404).json({
+//         message: "Approval record not found for this month",
+//       });
+//     }
+
+//     if (approval.approvedByUser) {
+//       return res.status(400).json({
+//         message: "You have already submitted approval for this month",
+//       });
+//     }
+
+//     approval.approvedByUser = true;
+//     await approval.save();
+
+//     res.json({
+//       message: "Month submitted successfully. No further entries allowed.",
+//     });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+// /* ============================
+//    SUPERIOR APPROVES MONTH
+// ============================ */
+// exports.approveBySuperior = async (req, res) => {
+//   try {
+//     const { userId, month } = req.body;
+
+//     if (!userId || !month) {
+//       return res.status(400).json({
+//         message: "User ID and month are required",
+//       });
+//     }
+
+//     const approval = await Approval.findOne({
+//       user: userId,
+//       month,
+//     });
+
+//     if (!approval) {
+//       return res.status(404).json({
+//         message: "Approval record not found",
+//       });
+//     }
+
+//     // ❗ Cannot approve unless user approved first
+//     if (!approval.approvedByUser) {
+//       return res.status(400).json({
+//         message: "User has not submitted approval yet",
+//       });
+//     }
+
+//     if (approval.approvedBySuperior) {
+//       return res.status(400).json({
+//         message: "Already approved by superior",
+//       });
+//     }
+
+//     approval.approvedBySuperior = true;
+//     await approval.save();
+
+//     res.json({
+//       message: "Approved by superior successfully",
+//     });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+
+
+
+
+
+// exports.getAdminDashboard = async (req, res) => {
+//   try {
+
+//     const users = await User.find();
+
+//     const currentMonthName = getCurrentMonth();
+//     const prevMonthName = getPreviousMonth();
+
+//     const result = [];
+
+//     for (const user of users) {
+
+//       /* ===============================
+//          1️⃣ CALCULATE EXPENSE TOTALS
+//       =============================== */
+
+//       const normalExpenses = await NormalExpense.find({
+//         user: user._id
+//       });
+
+//       const otherExpenses = await OtherExpense.find({
+//         user: user._id
+//       });
+
+//       let currentTotal = 0;
+//       let prevTotal = 0;
+
+//       normalExpenses.forEach(exp => {
+//         const month = MONTHS[new Date(exp.date).getMonth()];
+//         if (month === currentMonthName) currentTotal += exp.amount;
+//         if (month === prevMonthName) prevTotal += exp.amount;
+//       });
+
+//       otherExpenses.forEach(exp => {
+//         const month = MONTHS[new Date(exp.date).getMonth()];
+//         if (month === currentMonthName) currentTotal += exp.amount;
+//         if (month === prevMonthName) prevTotal += exp.amount;
+//       });
+
+//       /* ===============================
+//          2️⃣ FETCH APPROVAL DATA
+//       =============================== */
+
+//       const approvals = await Approval.find({
+//         user: user._id,
+//         month: { $in: [prevMonthName, currentMonthName] }
+//       });
+
+//       const approvalMap = {};
+
+//       approvals.forEach(a => {
+//         approvalMap[a.month] = {
+//           approvedByUser: a.approvedByUser,
+//           approvedBySuperior: a.approvedBySuperior,
+//           NWdays: a.NWdays || 0
+//         };
+//       });
+
+//       /* ===============================
+//          3️⃣ BUILD RESPONSE OBJECT
+//       =============================== */
+
+//       result.push({
+//         _id: user._id,
+//         username: user.username,
+//         userId: user.userId,
+//         hq: user.hq,
+//         lastReported: user.lastReported,
+
+//         prevMonth: {
+//           month: prevMonthName,
+//           total: prevTotal,
+//           approvedByUser: approvalMap[prevMonthName]?.approvedByUser || false,
+//           approvedBySuperior: approvalMap[prevMonthName]?.approvedBySuperior || false,
+//           NWdays: approvalMap[prevMonthName]?.NWdays || 0
+//         },
+
+//         currentMonth: {
+//           month: currentMonthName,
+//           total: currentTotal,
+//           approvedByUser: approvalMap[currentMonthName]?.approvedByUser || false,
+//           approvedBySuperior: approvalMap[currentMonthName]?.approvedBySuperior || false,
+//           NWdays: approvalMap[currentMonthName]?.NWdays || 0
+//         }
+//       });
+//     }
+
+//     res.json(result);
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+
 
 
 
@@ -181,13 +681,18 @@ const MONTHS = [
   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
 ];
 
+/* ===========================
+   DATE HELPERS (STRING SAFE)
+   =========================== */
+
+const parseDateString = (dateStr) => {
+  const [day, month, year] = dateStr.split("-");
+  return new Date(year, month - 1, day);
+};
+
 const getCurrentMonth = () => {
   const now = new Date();
   return MONTHS[now.getMonth()];
-};
-
-const getMonthFromDate = (dateObj) => {
-  return MONTHS[dateObj.getMonth()];
 };
 
 const getLastThreeMonths = () => {
@@ -201,9 +706,8 @@ const getLastThreeMonths = () => {
     months.push(MONTHS[index]);
   }
 
-  return months; // [CURRENT, PREV1, PREV2]
+  return months;
 };
-
 
 const getPreviousMonth = () => {
   const now = new Date();
@@ -211,164 +715,9 @@ const getPreviousMonth = () => {
   return MONTHS[index];
 };
 
-// const approvals = await Approval.find({
-//   user: user._id,
-//   month: { $in: [prevMonthName, currentMonthName] }
-// });
-
-// const approvalMap = {};
-
-// approvals.forEach(a => {
-//   approvalMap[a.month] = {
-//     approvedByUser: a.approvedByUser,
-//     approvedBySuperior: a.approvedBySuperior,
-//     NWdays: a.NWdays
-//   };
-// });
-
-// exports.ensureMonthlyApprovals = async () => {
-
-//   const now = new Date();
-//   const currentMonth = getCurrentMonth();
-
-//   // 1️⃣ Create approval for all users (if not exists)
-//   const users = await User.find();
-
-//   for (const user of users) {
-//     await Approval.findOneAndUpdate(
-//       { user: user._id, month: currentMonth },
-//       {
-//         user: user._id,
-//         month: currentMonth,
-//         normalExpTotal: 0,
-//         otherExpTotal: 0,
-//         lastReported: null,
-//         approvedByUser: false,
-//         approvedBySuperior: false,
-//       },
-//       { upsert: true }
-//     );
-//   }
-
-//   // 2️⃣ Keep only last 3 months (Approval collection)
-//   const allowedMonths = getLastThreeMonths();
-
-//   await Approval.deleteMany({
-//     month: { $nin: allowedMonths }
-//   });
-
-//   // 3️⃣ HARD DELETE OLD EXPENSES
-
-//   // Start of month 2 months ago
-//   const thresholdDate = new Date(
-//     now.getFullYear(),
-//     now.getMonth() - 2,
-//     1
-//   );
-
-//   await NormalExpense.deleteMany({
-//     date: { $lt: thresholdDate }
-//   });
-
-//   await OtherExpense.deleteMany({
-//     date: { $lt: thresholdDate }
-//   });
-// };
-
-// exports.ensureMonthlyApprovals = async () => {
-
-//   const now = new Date();
-//   const currentMonth = getCurrentMonth();
-
-//   // 1️⃣ Create approval for all users (if not exists)
-//   const users = await User.find();
-
-//   for (const user of users) {
-//     await Approval.findOneAndUpdate(
-//       { user: user._id, month: currentMonth },
-//       {
-//         user: user._id,
-//         month: currentMonth,
-//         normalExpTotal: 0,
-//         otherExpTotal: 0,
-//         NWdays: 0, // ✅ ADDED
-//         lastReported: null,
-//         approvedByUser: false,
-//         approvedBySuperior: false,
-//       },
-//       { upsert: true }
-//     );
-//   }
-
-//   // 2️⃣ Keep only last 3 months (Approval collection)
-//   const allowedMonths = getLastThreeMonths();
-
-//   await Approval.deleteMany({
-//     month: { $nin: allowedMonths }
-//   });
-
-//   // 3️⃣ HARD DELETE OLD EXPENSES
-
-//   const thresholdDate = new Date(
-//     now.getFullYear(),
-//     now.getMonth() - 2,
-//     1
-//   );
-
-//   await NormalExpense.deleteMany({
-//     date: { $lt: thresholdDate }
-//   });
-
-//   await OtherExpense.deleteMany({
-//     date: { $lt: thresholdDate }
-//   });
-// };
-
-
-// exports.ensureMonthlyApprovals = async () => {
-
-//   const now = new Date();
-//   const currentMonth = getCurrentMonth();
-
-//   const users = await User.find();
-
-//   for (const user of users) {
-//     await Approval.findOneAndUpdate(
-//       { user: user._id, month: currentMonth },
-//       {
-//         user: user._id,
-//         month: currentMonth,
-//         NWdays: 0,
-//         lastReported: null,
-//         approvedByUser: false,
-//         approvedBySuperior: false,
-//       },
-//       { upsert: true }
-//     );
-//   }
-
-//   // Keep only last 3 months
-//   const allowedMonths = getLastThreeMonths();
-
-//   await Approval.deleteMany({
-//     month: { $nin: allowedMonths }
-//   });
-
-//   // Delete old expenses
-//   const thresholdDate = new Date(
-//     now.getFullYear(),
-//     now.getMonth() - 2,
-//     1
-//   );
-
-//   await NormalExpense.deleteMany({
-//     date: { $lt: thresholdDate }
-//   });
-
-//   await OtherExpense.deleteMany({
-//     date: { $lt: thresholdDate }
-//   });
-// };
+/* ===========================
+   ENSURE MONTHLY APPROVALS
+   =========================== */
 
 exports.ensureMonthlyApprovals = async () => {
 
@@ -389,13 +738,17 @@ exports.ensureMonthlyApprovals = async () => {
           approvedByUser: false,
           approvedBySuperior: false,
           TR: 0,
-normalExpTotal: 0,
-otherExpTotal: 0,
+          normalExpTotal: 0,
+          otherExpTotal: 0,
         }
       },
       { upsert: true }
     );
   }
+
+  /* ===============================
+     KEEP ONLY LAST 3 MONTHS (APPROVAL)
+  =============================== */
 
   const allowedMonths = getLastThreeMonths();
 
@@ -403,21 +756,38 @@ otherExpTotal: 0,
     month: { $nin: allowedMonths }
   });
 
+  /* ===============================
+     HARD DELETE OLD EXPENSES
+     (STRING DATE SAFE)
+  =============================== */
+
   const thresholdDate = new Date(
     now.getFullYear(),
     now.getMonth() - 2,
     1
   );
 
-  await NormalExpense.deleteMany({
-    date: { $lt: thresholdDate }
-  });
+  const normalExpenses = await NormalExpense.find();
+  const otherExpenses = await OtherExpense.find();
 
-  await OtherExpense.deleteMany({
-    date: { $lt: thresholdDate }
-  });
+  for (const exp of normalExpenses) {
+    const expDate = parseDateString(exp.date);
+    if (expDate < thresholdDate) {
+      await exp.deleteOne();
+    }
+  }
+
+  for (const exp of otherExpenses) {
+    const expDate = parseDateString(exp.date);
+    if (expDate < thresholdDate) {
+      await exp.deleteOne();
+    }
+  }
 };
 
+/* ===========================
+   GET MY APPROVALS
+   =========================== */
 
 exports.getMyApprovals = async (req, res) => {
   try {
@@ -432,10 +802,10 @@ exports.getMyApprovals = async (req, res) => {
   }
 };
 
-
-/* ============================
+/* ===========================
    GET SPECIFIC USER APPROVALS
-============================ */
+   =========================== */
+
 exports.getUserApprovals = async (req, res) => {
   try {
     const approvals = await Approval.find({
@@ -449,10 +819,10 @@ exports.getUserApprovals = async (req, res) => {
   }
 };
 
+/* ===========================
+   MANUAL TRIGGER
+   =========================== */
 
-/* ============================
-   MANUAL TRIGGER (OPTIONAL)
-============================ */
 exports.triggerMonthlyCheck = async (req, res) => {
   try {
     await exports.ensureMonthlyApprovals();
@@ -466,14 +836,14 @@ exports.triggerMonthlyCheck = async (req, res) => {
   }
 };
 
-
-/* ============================
+/* ===========================
    USER SUBMIT MONTH APPROVAL
-============================ */
+   =========================== */
+
 exports.submitMyApproval = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { month } = req.body; // Expect "JAN", "FEB", etc.
+    const { month } = req.body;
 
     if (!month) {
       return res.status(400).json({
@@ -511,10 +881,10 @@ exports.submitMyApproval = async (req, res) => {
   }
 };
 
-
-/* ============================
+/* ===========================
    SUPERIOR APPROVES MONTH
-============================ */
+   =========================== */
+
 exports.approveBySuperior = async (req, res) => {
   try {
     const { userId, month } = req.body;
@@ -536,7 +906,6 @@ exports.approveBySuperior = async (req, res) => {
       });
     }
 
-    // ❗ Cannot approve unless user approved first
     if (!approval.approvedByUser) {
       return res.status(400).json({
         message: "User has not submitted approval yet",
@@ -562,11 +931,9 @@ exports.approveBySuperior = async (req, res) => {
   }
 };
 
-
-
-
-
-
+/* ===========================
+   ADMIN DASHBOARD
+   =========================== */
 
 exports.getAdminDashboard = async (req, res) => {
   try {
@@ -580,10 +947,6 @@ exports.getAdminDashboard = async (req, res) => {
 
     for (const user of users) {
 
-      /* ===============================
-         1️⃣ CALCULATE EXPENSE TOTALS
-      =============================== */
-
       const normalExpenses = await NormalExpense.find({
         user: user._id
       });
@@ -596,20 +959,20 @@ exports.getAdminDashboard = async (req, res) => {
       let prevTotal = 0;
 
       normalExpenses.forEach(exp => {
-        const month = MONTHS[new Date(exp.date).getMonth()];
-        if (month === currentMonthName) currentTotal += exp.amount;
-        if (month === prevMonthName) prevTotal += exp.amount;
+        const [day, monthNumber] = exp.date.split("-");
+        const month = MONTHS[Number(monthNumber) - 1];
+
+        if (month === currentMonthName) currentTotal += exp.total;
+        if (month === prevMonthName) prevTotal += exp.total;
       });
 
       otherExpenses.forEach(exp => {
-        const month = MONTHS[new Date(exp.date).getMonth()];
-        if (month === currentMonthName) currentTotal += exp.amount;
-        if (month === prevMonthName) prevTotal += exp.amount;
-      });
+        const [day, monthNumber] = exp.date.split("-");
+        const month = MONTHS[Number(monthNumber) - 1];
 
-      /* ===============================
-         2️⃣ FETCH APPROVAL DATA
-      =============================== */
+        if (month === currentMonthName) currentTotal += exp.total;
+        if (month === prevMonthName) prevTotal += exp.total;
+      });
 
       const approvals = await Approval.find({
         user: user._id,
@@ -625,10 +988,6 @@ exports.getAdminDashboard = async (req, res) => {
           NWdays: a.NWdays || 0
         };
       });
-
-      /* ===============================
-         3️⃣ BUILD RESPONSE OBJECT
-      =============================== */
 
       result.push({
         _id: user._id,

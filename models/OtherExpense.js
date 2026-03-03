@@ -10,10 +10,11 @@ const otherExpenseSchema = new mongoose.Schema(
     },
 
     date: {
-      type: Date,
-      required: true,
-      index: true,
-    },
+  type: String,
+  required: true,
+  index: true,
+  match: /^\d{2}-\d{2}-\d{4}$/, // DD-MM-YYYY
+},
 
     amount: {
       type: Number,
