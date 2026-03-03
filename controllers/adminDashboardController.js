@@ -320,6 +320,166 @@
 
 
 
+// const User = require("../models/User");
+// const Approval = require("../models/Approval");
+// const SRC = require("../models/SRC");
+
+// const MONTHS = [
+//   "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+//   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+// ];
+
+// const getCurrentMonthIndex = () => {
+//   return new Date().getMonth();
+// };
+
+// /* =========================================
+//    RECURSIVE SUBORDINATE FETCH
+// ========================================= */
+// async function getAllSubordinates(userId, company) {
+//   const directSubs = await User.find({
+//     superior: userId,
+//     company,
+//     isActive: true,
+//     role: { $ne: "admin" },
+//   }).select("_id userId username role");
+
+//   let allSubs = [...directSubs];
+
+//   for (let sub of directSubs) {
+//     const nested = await getAllSubordinates(sub._id, company);
+//     allSubs = [...allSubs, ...nested];
+//   }
+
+//   return allSubs;
+// }
+
+// /* =========================================
+//    ADMIN DASHBOARD SUMMARY (STORED TOTALS)
+// ========================================= */
+// exports.getAdminDashboard = async (req, res) => {
+//   try {
+//     const requester = req.user;
+
+//     if (!["admin", "manager"].includes(req.user.role)) {
+//   return res.status(403).json({ message: "Not authorized" });
+// }
+
+//     const now = new Date();
+//     const currentMonthIndex = getCurrentMonthIndex();
+//     const prevMonthIndex =
+//       (currentMonthIndex - 1 + 12) % 12;
+
+//     const currentMonthCode = MONTHS[currentMonthIndex];
+//     const prevMonthCode = MONTHS[prevMonthIndex];
+
+//     // 🔹 Fetch all active non-admin users of same company
+//     // const users = await User.find({
+//     //   company: requester.company,
+//     //   isActive: true,
+//     //   role: { $ne: "admin" },
+//     // }).select("_id userId username role");
+
+//     let userQuery = {
+//   company: requester.company,
+//   isActive: true,
+//   role: { $ne: "admin" },
+// };
+
+// // 🔹 If manager → only show their subordinates
+// if (requester.role === "manager") {
+//   userQuery.superior = requester._id;
+// }
+
+// const users = await User.find(userQuery)
+//   .select("_id userId username role");
+
+//     // 🔹 Fetch all approvals for current + prev month in ONE query
+//     const approvals = await Approval.find({
+//       user: { $in: users.map(u => u._id) },
+//       month: { $in: [currentMonthCode, prevMonthCode] },
+//     });
+
+//     const dashboardData = [];
+
+//     for (const user of users) {
+
+//       const hq = await SRC.findOne({
+//         user: user._id,
+//         station: "HQ",
+//       }).select("placeOfWork");
+
+//       const currentApproval = approvals.find(
+//         (a) =>
+//           a.user.toString() === user._id.toString() &&
+//           a.month === currentMonthCode
+//       );
+
+//       const prevApproval = approvals.find(
+//         (a) =>
+//           a.user.toString() === user._id.toString() &&
+//           a.month === prevMonthCode
+//       );
+
+//       const currentNormal = currentApproval?.normalExpTotal || 0;
+//       const currentOther = currentApproval?.otherExpTotal || 0;
+//       const currentTotal = currentNormal + currentOther;
+
+//       const prevNormal = prevApproval?.normalExpTotal || 0;
+//       const prevOther = prevApproval?.otherExpTotal || 0;
+//       const prevTotal = prevNormal + prevOther;
+
+//       const currentNWdays = currentApproval?.NWdays || 0;
+//       const prevNWdays = prevApproval?.NWdays || 0;
+
+//       const currentTRdays = currentApproval?.TR || 0;
+// const prevTRdays = prevApproval?.TR || 0;
+
+//       dashboardData.push({
+//         _id: user._id,
+//         userId: user.userId,
+//         username: user.username,
+//         role: user.role,
+//         hq: hq?.placeOfWork || "-",
+
+//         currentMonth: {
+//           month: currentMonthCode,
+//           total: currentTotal,
+//           approvedByUser:
+//             currentApproval?.approvedByUser || false,
+//           approvedBySuperior:
+//             currentApproval?.approvedBySuperior || false,
+//           NWdays: currentNWdays,
+//           TRdays: currentTRdays,
+//         },
+
+//         prevMonth: {
+//           month: prevMonthCode,
+//           total: prevTotal,
+//           approvedByUser:
+//             prevApproval?.approvedByUser || false,
+//           approvedBySuperior:
+//             prevApproval?.approvedBySuperior || false,
+//           NWdays: prevNWdays,
+//           TRdays: prevTRdays,
+//         },
+
+//         NWdays: currentNWdays,
+//         lastReported: currentApproval?.lastReported || "-",
+//       });
+//     }
+
+//     res.json(dashboardData);
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+
+
 const User = require("../models/User");
 const Approval = require("../models/Approval");
 const SRC = require("../models/SRC");
@@ -334,6 +494,27 @@ const getCurrentMonthIndex = () => {
 };
 
 /* =========================================
+   RECURSIVE SUBORDINATE FETCH
+========================================= */
+async function getAllSubordinates(userId, company) {
+  const directSubs = await User.find({
+    superior: userId,
+    company,
+    isActive: true,
+    role: { $ne: "admin" },
+  }).select("_id userId username role");
+
+  let allSubs = [...directSubs];
+
+  for (let sub of directSubs) {
+    const nested = await getAllSubordinates(sub._id, company);
+    allSubs = [...allSubs, ...nested];
+  }
+
+  return allSubs;
+}
+
+/* =========================================
    ADMIN DASHBOARD SUMMARY (STORED TOTALS)
 ========================================= */
 exports.getAdminDashboard = async (req, res) => {
@@ -341,8 +522,8 @@ exports.getAdminDashboard = async (req, res) => {
     const requester = req.user;
 
     if (!["admin", "manager"].includes(req.user.role)) {
-  return res.status(403).json({ message: "Not authorized" });
-}
+      return res.status(403).json({ message: "Not authorized" });
+    }
 
     const now = new Date();
     const currentMonthIndex = getCurrentMonthIndex();
@@ -352,28 +533,23 @@ exports.getAdminDashboard = async (req, res) => {
     const currentMonthCode = MONTHS[currentMonthIndex];
     const prevMonthCode = MONTHS[prevMonthIndex];
 
-    // 🔹 Fetch all active non-admin users of same company
-    // const users = await User.find({
-    //   company: requester.company,
-    //   isActive: true,
-    //   role: { $ne: "admin" },
-    // }).select("_id userId username role");
+    let users = [];
 
-    let userQuery = {
-  company: requester.company,
-  isActive: true,
-  role: { $ne: "admin" },
-};
+    if (requester.role === "admin") {
+      users = await User.find({
+        company: requester.company,
+        isActive: true,
+        role: { $ne: "admin" },
+      }).select("_id userId username role");
+    }
 
-// 🔹 If manager → only show their subordinates
-if (requester.role === "manager") {
-  userQuery.superior = requester._id;
-}
+    if (requester.role === "manager") {
+      users = await getAllSubordinates(
+        requester._id,
+        requester.company
+      );
+    }
 
-const users = await User.find(userQuery)
-  .select("_id userId username role");
-
-    // 🔹 Fetch all approvals for current + prev month in ONE query
     const approvals = await Approval.find({
       user: { $in: users.map(u => u._id) },
       month: { $in: [currentMonthCode, prevMonthCode] },
@@ -412,7 +588,7 @@ const users = await User.find(userQuery)
       const prevNWdays = prevApproval?.NWdays || 0;
 
       const currentTRdays = currentApproval?.TR || 0;
-const prevTRdays = prevApproval?.TR || 0;
+      const prevTRdays = prevApproval?.TR || 0;
 
       dashboardData.push({
         _id: user._id,
