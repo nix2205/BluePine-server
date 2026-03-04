@@ -806,10 +806,25 @@ exports.getMyApprovals = async (req, res) => {
    GET SPECIFIC USER APPROVALS
    =========================== */
 
+// exports.getUserApprovals = async (req, res) => {
+//   try {
+//     const approvals = await Approval.find({
+//       user: req.params.userId
+//     });
+
+//     res.json(approvals);
+
+//   } catch (err) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
 exports.getUserApprovals = async (req, res) => {
   try {
+    const { userId } = req.params;
+
     const approvals = await Approval.find({
-      user: req.params.userId
+      user: userId
     });
 
     res.json(approvals);
@@ -885,6 +900,52 @@ exports.submitMyApproval = async (req, res) => {
    SUPERIOR APPROVES MONTH
    =========================== */
 
+// exports.approveBySuperior = async (req, res) => {
+//   try {
+//     const { userId, month } = req.body;
+
+//     if (!userId || !month) {
+//       return res.status(400).json({
+//         message: "User ID and month are required",
+//       });
+//     }
+
+//     const approval = await Approval.findOne({
+//       user: userId,
+//       month,
+//     });
+
+//     if (!approval) {
+//       return res.status(404).json({
+//         message: "Approval record not found",
+//       });
+//     }
+
+//     if (!approval.approvedByUser) {
+//       return res.status(400).json({
+//         message: "User has not submitted approval yet",
+//       });
+//     }
+
+//     if (approval.approvedBySuperior) {
+//       return res.status(400).json({
+//         message: "Already approved by superior",
+//       });
+//     }
+
+//     approval.approvedBySuperior = true;
+//     await approval.save();
+
+//     res.json({
+//       message: "Approved by superior successfully",
+//     });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
 exports.approveBySuperior = async (req, res) => {
   try {
     const { userId, month } = req.body;
@@ -903,12 +964,6 @@ exports.approveBySuperior = async (req, res) => {
     if (!approval) {
       return res.status(404).json({
         message: "Approval record not found",
-      });
-    }
-
-    if (!approval.approvedByUser) {
-      return res.status(400).json({
-        message: "User has not submitted approval yet",
       });
     }
 

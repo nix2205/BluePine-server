@@ -853,36 +853,79 @@ exports.getMyExpenses = async (req, res) => {
    GET EXPENSES (ADMIN/MANAGER)
    =========================== */
 
+// exports.getExpenses = async (req, res) => {
+//   try {
+//     const { userId, startDate, endDate } = req.query;
+
+//     let targetUser;
+
+//     if (req.user.role === "admin") {
+//       targetUser = userId;
+//     }
+//     else if (req.user.role === "manager") {
+//       if (userId === req.user._id.toString()) {
+//         targetUser = req.user._id;
+//       } else {
+//         const subordinate = await User.findOne({
+//           _id: userId,
+//           superior: req.user._id,
+//         });
+
+//         if (!subordinate) {
+//           return res.status(403).json({
+//             message: "Not authorized",
+//           });
+//         }
+
+//         targetUser = userId;
+//       }
+//     }
+//     else {
+//       targetUser = req.user._id;
+//     }
+
+//     const allNormal = await NormalExpense.find({ user: targetUser });
+//     const allOther = await OtherExpense.find({ user: targetUser });
+
+//     let normalExpenses = allNormal;
+//     let otherExpenses = allOther;
+
+//     if (startDate && endDate) {
+//       const startObj = parseDateString(startDate);
+//       const endObj = parseDateString(endDate);
+
+//       normalExpenses = allNormal.filter(e => {
+//         const d = parseDateString(e.date);
+//         return d >= startObj && d <= endObj;
+//       });
+
+//       otherExpenses = allOther.filter(e => {
+//         const d = parseDateString(e.date);
+//         return d >= startObj && d <= endObj;
+//       });
+//     }
+
+//     normalExpenses.sort((a, b) =>
+//       parseDateString(b.date) - parseDateString(a.date)
+//     );
+
+//     otherExpenses.sort((a, b) =>
+//       parseDateString(b.date) - parseDateString(a.date)
+//     );
+
+//     res.json({ normalExpenses, otherExpenses });
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
 exports.getExpenses = async (req, res) => {
   try {
     const { userId, startDate, endDate } = req.query;
 
-    let targetUser;
-
-    if (req.user.role === "admin") {
-      targetUser = userId;
-    }
-    else if (req.user.role === "manager") {
-      if (userId === req.user._id.toString()) {
-        targetUser = req.user._id;
-      } else {
-        const subordinate = await User.findOne({
-          _id: userId,
-          superior: req.user._id,
-        });
-
-        if (!subordinate) {
-          return res.status(403).json({
-            message: "Not authorized",
-          });
-        }
-
-        targetUser = userId;
-      }
-    }
-    else {
-      targetUser = req.user._id;
-    }
+    const targetUser = userId || req.user._id;
 
     const allNormal = await NormalExpense.find({ user: targetUser });
     const allOther = await OtherExpense.find({ user: targetUser });
@@ -921,9 +964,65 @@ exports.getExpenses = async (req, res) => {
   }
 };
 
+
 /* ===========================
    UPDATE NORMAL EXPENSE
    =========================== */
+
+// exports.updateNormalExpense = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { ExtraTA, ExtraDA, taDesc, daDesc } = req.body;
+
+//     const expense = await NormalExpense.findById(id);
+//     if (!expense)
+//       return res.status(404).json({ message: "Not found" });
+
+//     // Permission checks (same logic as yours)
+//     if (req.user.role === "manager") {
+//       const subordinate = await User.findOne({
+//         _id: expense.user,
+//         superior: req.user._id,
+//       });
+//       if (!subordinate)
+//         return res.status(403).json({ message: "Not authorized" });
+//     }
+//     else if (
+//       req.user.role !== "admin" &&
+//       expense.user.toString() !== req.user._id.toString()
+//     ) {
+//       return res.status(403).json({ message: "Not authorized" });
+//     }
+
+//     if (ExtraTA !== undefined) expense.ExtraTA = Number(ExtraTA);
+//     if (ExtraDA !== undefined) expense.ExtraDA = Number(ExtraDA);
+//     if (taDesc !== undefined) expense.taDesc = taDesc;
+//     if (daDesc !== undefined) expense.daDesc = daDesc;
+
+//     expense.total =
+//       Number(expense.TA || 0) +
+//       Number(expense.DA || 0) +
+//       Number(expense.ExtraTA || 0) +
+//       Number(expense.ExtraDA || 0);
+
+//     await expense.save();
+
+//     const monthString = getMonthFromStringDate(expense.date);
+//     const year = getYearFromStringDate(expense.date);
+
+//     await recalculateNormalExpTotal(expense.user, monthString, year);
+
+//     if (expense.workType === "NW")
+//       await recalculateNWDays(expense.user, monthString, year);
+
+//     await recalculateTRDays(expense.user, monthString, year);
+
+//     res.json({ message: "Updated", expense });
+
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
 
 exports.updateNormalExpense = async (req, res) => {
   try {
@@ -933,22 +1032,6 @@ exports.updateNormalExpense = async (req, res) => {
     const expense = await NormalExpense.findById(id);
     if (!expense)
       return res.status(404).json({ message: "Not found" });
-
-    // Permission checks (same logic as yours)
-    if (req.user.role === "manager") {
-      const subordinate = await User.findOne({
-        _id: expense.user,
-        superior: req.user._id,
-      });
-      if (!subordinate)
-        return res.status(403).json({ message: "Not authorized" });
-    }
-    else if (
-      req.user.role !== "admin" &&
-      expense.user.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({ message: "Not authorized" });
-    }
 
     if (ExtraTA !== undefined) expense.ExtraTA = Number(ExtraTA);
     if (ExtraDA !== undefined) expense.ExtraDA = Number(ExtraDA);
@@ -980,9 +1063,57 @@ exports.updateNormalExpense = async (req, res) => {
   }
 };
 
+
 /* ===========================
    UPDATE OTHER EXPENSE
    =========================== */
+
+// exports.updateOtherExpense = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { extraAmount, extraDescription } = req.body;
+
+//     const expense = await OtherExpense.findById(id);
+//     if (!expense)
+//       return res.status(404).json({ message: "Not found" });
+
+//     if (req.user.role === "manager") {
+//       const subordinate = await User.findOne({
+//         _id: expense.user,
+//         superior: req.user._id,
+//       });
+//       if (!subordinate)
+//         return res.status(403).json({ message: "Not authorized" });
+//     }
+//     else if (req.user.role !== "admin") {
+//       return res.status(403).json({ message: "Not authorized" });
+//     }
+
+//     if (extraAmount !== undefined)
+//       expense.extraAmount = Number(extraAmount);
+
+//     if (extraDescription !== undefined)
+//       expense.extraDescription = extraDescription;
+
+//     expense.total =
+//       Number(expense.amount || 0) +
+//       Number(expense.extraAmount || 0);
+
+//     await expense.save();
+
+//     const monthString = getMonthFromStringDate(expense.date);
+//     const year = getYearFromStringDate(expense.date);
+
+//     await recalculateOtherExpTotal(expense.user, monthString, year);
+//     await recalculateTRDays(expense.user, monthString, year);
+
+//     res.json({ message: "Updated", expense });
+
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
 
 exports.updateOtherExpense = async (req, res) => {
   try {
@@ -992,18 +1123,6 @@ exports.updateOtherExpense = async (req, res) => {
     const expense = await OtherExpense.findById(id);
     if (!expense)
       return res.status(404).json({ message: "Not found" });
-
-    if (req.user.role === "manager") {
-      const subordinate = await User.findOne({
-        _id: expense.user,
-        superior: req.user._id,
-      });
-      if (!subordinate)
-        return res.status(403).json({ message: "Not authorized" });
-    }
-    else if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Not authorized" });
-    }
 
     if (extraAmount !== undefined)
       expense.extraAmount = Number(extraAmount);
@@ -1030,6 +1149,62 @@ exports.updateOtherExpense = async (req, res) => {
   }
 };
 
+// exports.deleteNormalExpense = async (req, res) => {
+//   try {
+//     const requester = req.user;
+//     const { id } = req.params;
+
+//     const expense = await NormalExpense.findById(id);
+
+//     if (!expense) {
+//       return res.status(404).json({ message: "Normal expense not found" });
+//     }
+
+//     // ADMIN → allowed
+//     if (requester.role === "admin") {
+//       // allowed
+//     }
+
+//     // MANAGER → only subordinates
+//     else if (requester.role === "manager") {
+//       const subordinate = await User.findOne({
+//         _id: expense.user,
+//         superior: requester._id,
+//       });
+
+//       if (!subordinate) {
+//         return res.status(403).json({
+//           message: "Not authorized to delete this expense",
+//         });
+//       }
+//     }
+
+//     // EXECUTIVE → only own
+//     else if (expense.user.toString() !== requester._id.toString()) {
+//       return res.status(403).json({
+//         message: "Not authorized to delete this expense",
+//       });
+//     }
+
+//     await expense.deleteOne();
+
+//     const monthString = getMonthFromStringDate(expense.date);
+//     const year = getYearFromStringDate(expense.date);
+
+//     await recalculateNormalExpTotal(expense.user, monthString, year);
+
+//     if (expense.workType === "NW") {
+//       await recalculateNWDays(expense.user, monthString, year);
+//     }
+
+//     await recalculateTRDays(expense.user, monthString, year);
+
+//     res.json({ message: "Normal expense deleted successfully" });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 
 exports.deleteNormalExpense = async (req, res) => {
   try {
@@ -1040,32 +1215,6 @@ exports.deleteNormalExpense = async (req, res) => {
 
     if (!expense) {
       return res.status(404).json({ message: "Normal expense not found" });
-    }
-
-    // ADMIN → allowed
-    if (requester.role === "admin") {
-      // allowed
-    }
-
-    // MANAGER → only subordinates
-    else if (requester.role === "manager") {
-      const subordinate = await User.findOne({
-        _id: expense.user,
-        superior: requester._id,
-      });
-
-      if (!subordinate) {
-        return res.status(403).json({
-          message: "Not authorized to delete this expense",
-        });
-      }
-    }
-
-    // EXECUTIVE → only own
-    else if (expense.user.toString() !== requester._id.toString()) {
-      return res.status(403).json({
-        message: "Not authorized to delete this expense",
-      });
     }
 
     await expense.deleteOne();
@@ -1088,57 +1237,58 @@ exports.deleteNormalExpense = async (req, res) => {
   }
 };
 
-exports.deleteOtherExpense = async (req, res) => {
-  try {
-    const requester = req.user;
-    const { id } = req.params;
 
-    const expense = await OtherExpense.findById(id);
+// exports.deleteOtherExpense = async (req, res) => {
+//   try {
+//     const requester = req.user;
+//     const { id } = req.params;
 
-    if (!expense) {
-      return res.status(404).json({ message: "Other expense not found" });
-    }
+//     const expense = await OtherExpense.findById(id);
 
-    // ADMIN → allowed
-    if (requester.role === "admin") {
-      // allowed
-    }
+//     if (!expense) {
+//       return res.status(404).json({ message: "Other expense not found" });
+//     }
 
-    // MANAGER → only subordinates
-    else if (requester.role === "manager") {
-      const subordinate = await User.findOne({
-        _id: expense.user,
-        superior: requester._id,
-      });
+//     // ADMIN → allowed
+//     if (requester.role === "admin") {
+//       // allowed
+//     }
 
-      if (!subordinate) {
-        return res.status(403).json({
-          message: "Not authorized to delete this expense",
-        });
-      }
-    }
+//     // MANAGER → only subordinates
+//     else if (requester.role === "manager") {
+//       const subordinate = await User.findOne({
+//         _id: expense.user,
+//         superior: requester._id,
+//       });
 
-    // EXECUTIVE → only own
-    else if (expense.user.toString() !== requester._id.toString()) {
-      return res.status(403).json({
-        message: "Not authorized to delete this expense",
-      });
-    }
+//       if (!subordinate) {
+//         return res.status(403).json({
+//           message: "Not authorized to delete this expense",
+//         });
+//       }
+//     }
 
-    await expense.deleteOne();
+//     // EXECUTIVE → only own
+//     else if (expense.user.toString() !== requester._id.toString()) {
+//       return res.status(403).json({
+//         message: "Not authorized to delete this expense",
+//       });
+//     }
 
-    const monthString = getMonthFromStringDate(expense.date);
-    const year = getYearFromStringDate(expense.date);
+//     await expense.deleteOne();
 
-    await recalculateOtherExpTotal(expense.user, monthString, year);
-    await recalculateTRDays(expense.user, monthString, year);
+//     const monthString = getMonthFromStringDate(expense.date);
+//     const year = getYearFromStringDate(expense.date);
 
-    res.json({ message: "Other expense deleted successfully" });
+//     await recalculateOtherExpTotal(expense.user, monthString, year);
+//     await recalculateTRDays(expense.user, monthString, year);
 
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+//     res.json({ message: "Other expense deleted successfully" });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 
 // exports.addOtherExpenseBySuperior = async (req, res) => {
 //   try {
@@ -1240,6 +1390,32 @@ exports.deleteOtherExpense = async (req, res) => {
 //   }
 // };
 
+exports.deleteOtherExpense = async (req, res) => {
+  try {
+    const requester = req.user;
+    const { id } = req.params;
+
+    const expense = await OtherExpense.findById(id);
+
+    if (!expense) {
+      return res.status(404).json({ message: "Other expense not found" });
+    }
+
+    await expense.deleteOne();
+
+    const monthString = getMonthFromStringDate(expense.date);
+    const year = getYearFromStringDate(expense.date);
+
+    await recalculateOtherExpTotal(expense.user, monthString, year);
+    await recalculateTRDays(expense.user, monthString, year);
+
+    res.json({ message: "Other expense deleted successfully" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 exports.addOtherExpenseBySuperior = async (req, res) => {
   try {
@@ -1256,38 +1432,14 @@ exports.addOtherExpenseBySuperior = async (req, res) => {
       category,
     } = req.body;
 
-    // 🔐 Only admin or manager
-    if (requester.role !== "admin" && requester.role !== "manager") {
-      return res.status(403).json({
-        message: "Not authorized to add other expense",
-      });
-    }
-
-    // MANAGER → only subordinates
-    if (requester.role === "manager") {
-      const subordinate = await User.findOne({
-        _id: userId,
-        superior: requester._id,
-      });
-
-      if (!subordinate) {
-        return res.status(403).json({
-          message: "Not authorized to add expense for this user",
-        });
-      }
-    }
-
-    // 📅 Handle date (FIXED ONLY THIS PART)
     let expenseDateString;
 
     if (date) {
       const parts = date.split("-");
 
-      // If already DD-MM-YYYY
       if (parts[0].length === 2) {
         expenseDateString = date;
       }
-      // If YYYY-MM-DD (HTML input format)
       else if (parts[0].length === 4) {
         const [yearInput, monthInput, dayInput] = parts;
         expenseDateString = `${dayInput}-${monthInput}-${yearInput}`;
@@ -1350,3 +1502,113 @@ exports.addOtherExpenseBySuperior = async (req, res) => {
     });
   }
 };
+
+// exports.addOtherExpenseBySuperior = async (req, res) => {
+//   try {
+//     const requester = req.user;
+
+//     const {
+//       userId,
+//       date,
+//       amount,
+//       extraAmount,
+//       description,
+//       billNo,
+//       extraDescription,
+//       category,
+//     } = req.body;
+
+//     // 🔐 Only admin or manager
+//     if (requester.role !== "admin" && requester.role !== "manager") {
+//       return res.status(403).json({
+//         message: "Not authorized to add other expense",
+//       });
+//     }
+
+//     // MANAGER → only subordinates
+//     if (requester.role === "manager") {
+//       const subordinate = await User.findOne({
+//         _id: userId,
+//         superior: requester._id,
+//       });
+
+//       if (!subordinate) {
+//         return res.status(403).json({
+//           message: "Not authorized to add expense for this user",
+//         });
+//       }
+//     }
+
+//     // 📅 Handle date (FIXED ONLY THIS PART)
+//     let expenseDateString;
+
+//     if (date) {
+//       const parts = date.split("-");
+
+//       // If already DD-MM-YYYY
+//       if (parts[0].length === 2) {
+//         expenseDateString = date;
+//       }
+//       // If YYYY-MM-DD (HTML input format)
+//       else if (parts[0].length === 4) {
+//         const [yearInput, monthInput, dayInput] = parts;
+//         expenseDateString = `${dayInput}-${monthInput}-${yearInput}`;
+//       } 
+//       else {
+//         return res.status(400).json({ message: "Invalid date format" });
+//       }
+//     } else {
+//       const today = new Date();
+//       const day = String(today.getDate()).padStart(2, "0");
+//       const month = String(today.getMonth() + 1).padStart(2, "0");
+//       const year = today.getFullYear();
+//       expenseDateString = `${day}-${month}-${year}`;
+//     }
+
+//     const newExpense = new OtherExpense({
+//       user: userId,
+//       date: expenseDateString,
+//     });
+
+//     if (amount !== undefined)
+//       newExpense.amount = Number(amount);
+
+//     if (extraAmount !== undefined)
+//       newExpense.extraAmount = Number(extraAmount);
+
+//     if (description !== undefined)
+//       newExpense.description = description;
+
+//     if (billNo !== undefined)
+//       newExpense.billNo = billNo;
+
+//     if (extraDescription !== undefined)
+//       newExpense.extraDescription = extraDescription;
+
+//     if (category !== undefined)
+//       newExpense.category = category;
+
+//     newExpense.total =
+//       Number(newExpense.amount || 0) +
+//       Number(newExpense.extraAmount || 0);
+
+//     await newExpense.save();
+
+//     const monthString = getMonthFromStringDate(expenseDateString);
+//     const year = getYearFromStringDate(expenseDateString);
+
+//     await recalculateOtherExpTotal(userId, monthString, year);
+//     await recalculateTRDays(userId, monthString, year);
+
+//     res.status(201).json({
+//       message: "Other expense added successfully",
+//       expense: newExpense,
+//     });
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({
+//       message: "Server error while adding other expense",
+//     });
+//   }
+// };

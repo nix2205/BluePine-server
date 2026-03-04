@@ -10,16 +10,102 @@ const CityMap = require("../models/CityMap");
 
 
 
+// exports.deleteUser = async (req, res) => {
+//   try {
+//     const requester = req.user;
+//     const { id } = req.params;
+
+//     if (!["admin", "manager"].includes(requester.role)) {
+//       return res.status(403).json({
+//         message: "Only admin or manager can delete users",
+//       });
+//     }
+
+//     const user = await User.findOne({
+//       _id: id,
+//       company: requester.company,
+//     });
+
+//     if (!user) {
+//       return res.status(404).json({
+//         message: "User not found",
+//       });
+//     }
+
+//     // ❗ Prevent deleting yourself
+//     if (user._id.toString() === requester._id.toString()) {
+//       return res.status(400).json({
+//         message: "You cannot delete your own account",
+//       });
+//     }
+
+//     /* ==============================
+//        REASSIGN SUBORDINATES IF MANAGER
+//     ============================== */
+//     if (user.role === "manager") {
+
+//       if (!user.superior) {
+//         return res.status(400).json({
+//           message:
+//             "Manager has no superior. Cannot reassign subordinates safely.",
+//         });
+//       }
+
+//       await User.updateMany(
+//         { superior: user._id },
+//         { $set: { superior: user.superior } }
+//       );
+//     }
+
+//     /* ==============================
+//        DELETE RELATED EXPENSE DATA
+//     ============================== */
+//     await NormalExpense.deleteMany({ user: id });
+//     await OtherExpense.deleteMany({ user: id });
+//     await Approval.deleteMany({ user: id });
+
+//     /* ==============================
+//        DELETE SRC DATA
+//     ============================== */
+
+//     // Base SRC
+//     await SRC.deleteMany({ user: id });
+
+//     // Propagated SRC
+//     await SRC.deleteMany({ originUser: id });
+
+//     /* ==============================
+//        DELETE CITYMAP DATA
+//     ============================== */
+
+//     // Base CityMaps
+//     await CityMap.deleteMany({ user: id });
+
+//     // Propagated CityMaps
+//     await CityMap.deleteMany({ originUser: id });
+
+//     /* ==============================
+//        DELETE USER
+//     ============================== */
+//     await user.deleteOne();
+
+//     res.json({
+//       message: "User and all related data deleted successfully",
+//     });
+
+//   } catch (err) {
+//     console.error("Delete User Error:", err);
+//     res.status(500).json({
+//       message: "Server error",
+//     });
+//   }
+// };
+
+
 exports.deleteUser = async (req, res) => {
   try {
     const requester = req.user;
     const { id } = req.params;
-
-    if (!["admin", "manager"].includes(requester.role)) {
-      return res.status(403).json({
-        message: "Only admin or manager can delete users",
-      });
-    }
 
     const user = await User.findOne({
       _id: id,
@@ -32,16 +118,12 @@ exports.deleteUser = async (req, res) => {
       });
     }
 
-    // ❗ Prevent deleting yourself
     if (user._id.toString() === requester._id.toString()) {
       return res.status(400).json({
         message: "You cannot delete your own account",
       });
     }
 
-    /* ==============================
-       REASSIGN SUBORDINATES IF MANAGER
-    ============================== */
     if (user.role === "manager") {
 
       if (!user.superior) {
@@ -57,36 +139,16 @@ exports.deleteUser = async (req, res) => {
       );
     }
 
-    /* ==============================
-       DELETE RELATED EXPENSE DATA
-    ============================== */
     await NormalExpense.deleteMany({ user: id });
     await OtherExpense.deleteMany({ user: id });
     await Approval.deleteMany({ user: id });
 
-    /* ==============================
-       DELETE SRC DATA
-    ============================== */
-
-    // Base SRC
     await SRC.deleteMany({ user: id });
-
-    // Propagated SRC
     await SRC.deleteMany({ originUser: id });
 
-    /* ==============================
-       DELETE CITYMAP DATA
-    ============================== */
-
-    // Base CityMaps
     await CityMap.deleteMany({ user: id });
-
-    // Propagated CityMaps
     await CityMap.deleteMany({ originUser: id });
 
-    /* ==============================
-       DELETE USER
-    ============================== */
     await user.deleteOne();
 
     res.json({
@@ -100,9 +162,6 @@ exports.deleteUser = async (req, res) => {
     });
   }
 };
-
-
-
 /* =========================
    HARD DELETE USER
    + REASSIGN SUBORDINATES
@@ -260,13 +319,27 @@ exports.deleteUser = async (req, res) => {
 /* =========================
    GET ALL USERS
 ========================= */
+// exports.getAllUsers = async (req, res) => {
+//   try {
+//     const requester = req.user;
+
+//     if (!["admin", "manager"].includes(requester.role)) {
+//       return res.status(403).json({ message: "Not authorized" });
+//     }
+
+//     const users = await User.find({ company: requester.company })
+//       .select("_id userId username role")
+//       .sort({ username: 1 });
+
+//     res.json(users);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.getAllUsers = async (req, res) => {
   try {
     const requester = req.user;
-
-    if (!["admin", "manager"].includes(requester.role)) {
-      return res.status(403).json({ message: "Not authorized" });
-    }
 
     const users = await User.find({ company: requester.company })
       .select("_id userId username role")
@@ -305,19 +378,39 @@ exports.getAllUsers = async (req, res) => {
 //   }
 // };
 
+// exports.getUserById = async (req, res) => {
+//   try {
+//     const requester = req.user;
+//     const { id } = req.params;
+
+//     if (!["admin", "manager"].includes(requester.role)) {
+//       return res.status(403).json({ message: "Not authorized" });
+//     }
+
+//     const user = await User.findOne({
+//       _id: id,
+//       company: requester.company,
+//     }); // ✅ removed .select("-password")
+
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     res.json(user);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.getUserById = async (req, res) => {
   try {
     const requester = req.user;
     const { id } = req.params;
 
-    if (!["admin", "manager"].includes(requester.role)) {
-      return res.status(403).json({ message: "Not authorized" });
-    }
-
     const user = await User.findOne({
       _id: id,
       company: requester.company,
-    }); // ✅ removed .select("-password")
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -332,36 +425,12 @@ exports.getUserById = async (req, res) => {
 /* =========================
    CREATE USER (NO HASH)
 ========================= */
+
 exports.createUser = async (req, res) => {
   try {
     const creator = req.user;
     const { userId, username, password, role, superior } = req.body;
 
-    // 🔐 Only admin and manager can create users
-    if (!["admin", "manager"].includes(creator.role)) {
-      return res.status(403).json({
-        message: "Not authorized to create users",
-      });
-    }
-
-    // 🎯 Role validation based on creator
-    if (creator.role === "admin") {
-      if (!["manager", "executive"].includes(role)) {
-        return res.status(400).json({
-          message: "Invalid role",
-        });
-      }
-    }
-
-    if (creator.role === "manager") {
-  if (!["manager", "executive"].includes(role)) {
-    return res.status(403).json({
-      message: "Manager can only create manager or executive",
-    });
-  }
-}
-
-    // 🚫 Prevent duplicate userId
     const existing = await User.findOne({ userId });
     if (existing) {
       return res.status(400).json({
@@ -369,11 +438,10 @@ exports.createUser = async (req, res) => {
       });
     }
 
-    // 👤 Create user
     const newUser = await User.create({
       userId,
       username,
-      password, // 🔴 PLAIN TEXT (not recommended for production)
+      password,
       role,
       company: creator.company,
       superior: superior || creator._id,
@@ -391,6 +459,66 @@ exports.createUser = async (req, res) => {
     });
   }
 };
+
+// exports.createUser = async (req, res) => {
+//   try {
+//     const creator = req.user;
+//     const { userId, username, password, role, superior } = req.body;
+
+//     // 🔐 Only admin and manager can create users
+//     if (!["admin", "manager"].includes(creator.role)) {
+//       return res.status(403).json({
+//         message: "Not authorized to create users",
+//       });
+//     }
+
+//     // 🎯 Role validation based on creator
+//     if (creator.role === "admin") {
+//       if (!["manager", "executive"].includes(role)) {
+//         return res.status(400).json({
+//           message: "Invalid role",
+//         });
+//       }
+//     }
+
+//     if (creator.role === "manager") {
+//   if (!["manager", "executive"].includes(role)) {
+//     return res.status(403).json({
+//       message: "Manager can only create manager or executive",
+//     });
+//   }
+// }
+
+//     // 🚫 Prevent duplicate userId
+//     const existing = await User.findOne({ userId });
+//     if (existing) {
+//       return res.status(400).json({
+//         message: "UserId already exists",
+//       });
+//     }
+
+//     // 👤 Create user
+//     const newUser = await User.create({
+//       userId,
+//       username,
+//       password, // 🔴 PLAIN TEXT (not recommended for production)
+//       role,
+//       company: creator.company,
+//       superior: superior || creator._id,
+//     });
+
+//     res.status(201).json({
+//       message: "User created successfully",
+//       user: newUser,
+//     });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       message: "Server error",
+//     });
+//   }
+// };
 
 // /* =========================
 //    CREATE USER (NO HASH)
@@ -638,15 +766,44 @@ exports.resetPassword = async (req, res) => {
 /* =========================
    RESET USERNAME
 ========================= */
+// exports.resetUsername = async (req, res) => {
+//   try {
+//     const requester = req.user;
+//     const { id } = req.params;
+//     const { username } = req.body;
+
+//     if (!["admin", "manager"].includes(requester.role)) {
+//       return res.status(403).json({ message: "Not authorized" });
+//     }
+
+//     if (!username?.trim()) {
+//       return res.status(400).json({ message: "Username is required" });
+//     }
+
+//     const user = await User.findOne({
+//       _id: id,
+//       company: requester.company,
+//       isActive: true,
+//     });
+
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     user.username = username.trim();
+//     await user.save();
+
+//     res.json({ message: "Username updated successfully" });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.resetUsername = async (req, res) => {
   try {
     const requester = req.user;
     const { id } = req.params;
     const { username } = req.body;
-
-    if (!["admin", "manager"].includes(requester.role)) {
-      return res.status(403).json({ message: "Not authorized" });
-    }
 
     if (!username?.trim()) {
       return res.status(400).json({ message: "Username is required" });
@@ -674,15 +831,49 @@ exports.resetUsername = async (req, res) => {
 /* =========================
    RESET USER ID
 ========================= */
+// exports.resetUserId = async (req, res) => {
+//   try {
+//     const requester = req.user;
+//     const { id } = req.params;
+//     const { newUserId } = req.body;
+
+//     if (!["admin", "manager"].includes(requester.role)) {
+//       return res.status(403).json({ message: "Not authorized" });
+//     }
+
+//     if (!newUserId?.trim()) {
+//       return res.status(400).json({ message: "New userId is required" });
+//     }
+
+//     const existing = await User.findOne({ userId: newUserId });
+//     if (existing) {
+//       return res.status(400).json({ message: "UserId already exists" });
+//     }
+
+//     const user = await User.findOne({
+//       _id: id,
+//       company: requester.company,
+//       isActive: true,
+//     });
+
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     user.userId = newUserId.trim();
+//     await user.save();
+
+//     res.json({ message: "UserId updated successfully" });
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.resetUserId = async (req, res) => {
   try {
     const requester = req.user;
     const { id } = req.params;
     const { newUserId } = req.body;
-
-    if (!["admin", "manager"].includes(requester.role)) {
-      return res.status(403).json({ message: "Not authorized" });
-    }
 
     if (!newUserId?.trim()) {
       return res.status(400).json({ message: "New userId is required" });
@@ -711,4 +902,3 @@ exports.resetUserId = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-

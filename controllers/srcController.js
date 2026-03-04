@@ -687,6 +687,28 @@ const User = require("../models/User");
 /* =========================
    GET USER HQ
 ========================= */
+// exports.getUserHQ = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+
+//     const hq = await SRC.findOne({
+//       user: userId,
+//       station: "HQ",
+//     });
+
+//     if (!hq) {
+//       return res.json({ placeOfWork: "-" });
+//     }
+
+//     res.json({
+//       placeOfWork: hq.placeOfWork,
+//     });
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.getUserHQ = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -709,26 +731,39 @@ exports.getUserHQ = async (req, res) => {
   }
 };
 
-
 /* =========================
    GET USER SRCS
 ========================= */
+// exports.getUserSRCs = async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+
+//     // const srcs = await SRC.find({ user: userId })
+//     //   .sort({ station: 1, placeOfWork: 1 });
+//     const srcs = await SRC.find({ user: userId })
+//   .populate("originUser", "userId") // only fetch userId field
+//   .sort({ station: 1, placeOfWork: 1 });
+
+//     res.json(srcs);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.getUserSRCs = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // const srcs = await SRC.find({ user: userId })
-    //   .sort({ station: 1, placeOfWork: 1 });
     const srcs = await SRC.find({ user: userId })
-  .populate("originUser", "userId") // only fetch userId field
-  .sort({ station: 1, placeOfWork: 1 });
+      .populate("originUser", "userId")
+      .sort({ station: 1, placeOfWork: 1 });
 
     res.json(srcs);
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 /* =========================
    CREATE SRC (RESTORED)
@@ -1072,6 +1107,80 @@ async function createSRCForUser(
 //   }
 // };
 
+// exports.updateSRC = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const {
+//       placeOfWork,
+//       station,
+//       radius,
+//       kms,
+//       MOT,
+//       RsPerKm,
+//       DA,
+//       TA,
+//     } = req.body;
+
+//     const src = await SRC.findById(id);
+//     if (!src) {
+//       return res.status(404).json({ message: "SRC not found" });
+//     }
+
+//     /* ---------- PLACE DUPLICATE CHECK ---------- */
+//     if (placeOfWork) {
+//       const trimmed = placeOfWork.trim();
+
+//       const duplicate = await SRC.findOne({
+//         user: src.user,
+//         _id: { $ne: src._id },
+//         placeOfWork: trimmed,
+//       });
+
+//       if (duplicate) {
+//         return res.status(400).json({
+//           message: "Place of work already exists",
+//         });
+//       }
+
+//       src.placeOfWork = trimmed;
+//     }
+
+//     /* ---------- BASIC FIELD UPDATES ---------- */
+//     if (station !== undefined) src.station = station;
+//     if (radius !== undefined) src.radius = Number(radius);
+//     if (kms !== undefined) src.kms = Number(kms);
+//     if (MOT !== undefined) src.MOT = MOT;
+
+//     /* ---------- OVERRIDES (THIS WAS THE BUG) ---------- */
+//     if (RsPerKm !== undefined) {
+//       src.RsPerKmOverride = Number(RsPerKm);
+//     }
+
+//     if (DA !== undefined) {
+//       src.DAOverride = Number(DA);
+//     }
+
+//     if (TA !== undefined) {
+//       src.TAOverride = Number(TA);
+//     }
+
+//     /* ---------- HQ SAFETY ---------- */
+//     if (src.station === "HQ") {
+//       src.MOT = "Local";
+//       src.kms = 0;
+//       src.RsPerKmOverride = 0;
+//       src.TAOverride = 0;
+//     }
+
+//     await src.save();
+
+//     res.json(src);
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.updateSRC = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1091,32 +1200,17 @@ exports.updateSRC = async (req, res) => {
       return res.status(404).json({ message: "SRC not found" });
     }
 
-    /* ---------- PLACE DUPLICATE CHECK ---------- */
-    if (placeOfWork) {
-      const trimmed = placeOfWork.trim();
-
-      const duplicate = await SRC.findOne({
-        user: src.user,
-        _id: { $ne: src._id },
-        placeOfWork: trimmed,
-      });
-
-      if (duplicate) {
-        return res.status(400).json({
-          message: "Place of work already exists",
-        });
-      }
-
-      src.placeOfWork = trimmed;
+    /* ---------- BASIC FIELD UPDATES ---------- */
+    if (placeOfWork !== undefined) {
+      src.placeOfWork = placeOfWork.trim();
     }
 
-    /* ---------- BASIC FIELD UPDATES ---------- */
     if (station !== undefined) src.station = station;
     if (radius !== undefined) src.radius = Number(radius);
     if (kms !== undefined) src.kms = Number(kms);
     if (MOT !== undefined) src.MOT = MOT;
 
-    /* ---------- OVERRIDES (THIS WAS THE BUG) ---------- */
+    /* ---------- OVERRIDES ---------- */
     if (RsPerKm !== undefined) {
       src.RsPerKmOverride = Number(RsPerKm);
     }
@@ -1145,7 +1239,6 @@ exports.updateSRC = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 /* =========================
    APPLY CONFIG TO SRCS
@@ -1209,6 +1302,50 @@ exports.applyConfigToSRCs = async (req, res) => {
 /* =========================
    DELETE SRC (WITH UPWARD PROPAGATION)
 ========================= */
+// exports.deleteSRC = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const deleted = await SRC.findById(id);
+
+//     if (!deleted) {
+//       return res.status(404).json({ message: "SRC not found" });
+//     }
+
+//     const { placeOfWork, originUser } = deleted;
+
+//     // Delete the original
+//     await deleted.deleteOne();
+
+//     /* ===============================
+//        PROPAGATE DELETE UPWARD
+//     =============================== */
+
+//     let currentUser = await User.findById(originUser).select("superior");
+//     const visited = new Set();
+
+//     while (currentUser && currentUser.superior) {
+//       const superiorId = currentUser.superior.toString();
+
+//       if (visited.has(superiorId)) break;
+//       visited.add(superiorId);
+
+//       await SRC.deleteMany({
+//         user: superiorId,
+//         placeOfWork,
+//         originUser,
+//       });
+
+//       currentUser = await User.findById(superiorId).select("superior");
+//     }
+
+//     res.json({ message: `"${placeOfWork}" deleted for all managers and admin.`});
+
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
 exports.deleteSRC = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1221,12 +1358,7 @@ exports.deleteSRC = async (req, res) => {
 
     const { placeOfWork, originUser } = deleted;
 
-    // Delete the original
     await deleted.deleteOne();
-
-    /* ===============================
-       PROPAGATE DELETE UPWARD
-    =============================== */
 
     let currentUser = await User.findById(originUser).select("superior");
     const visited = new Set();
@@ -1246,13 +1378,14 @@ exports.deleteSRC = async (req, res) => {
       currentUser = await User.findById(superiorId).select("superior");
     }
 
-    res.json({ message: `"${placeOfWork}" deleted for all managers and admin.`});
+    res.json({
+      message: `"${placeOfWork}" deleted for all managers and admin.`,
+    });
 
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 /* =========================
    GET MY SRC
