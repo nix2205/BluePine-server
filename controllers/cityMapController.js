@@ -380,7 +380,10 @@ exports.recordLocation = async (req, res) => {
       stationType: srcEntry.station,
       address,
       date: new Date(),
-      time: new Date().toLocaleTimeString(),
+      time: new Date().toLocaleTimeString("en-IN", {
+  timeZone: "Asia/Kolkata",
+  hour12: true,
+}),
     });
 
     /* ==============================
@@ -425,7 +428,10 @@ exports.recordLocation = async (req, res) => {
             stationType: superiorSRC.station, // superior-specific station
             address,
             date: new Date(),
-            time: new Date().toLocaleTimeString(),
+            time: new Date().toLocaleTimeString("en-IN", {
+  timeZone: "Asia/Kolkata",
+  hour12: true,
+}),
           });
         }
       }
